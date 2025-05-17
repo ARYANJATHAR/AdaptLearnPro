@@ -1,0 +1,111 @@
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+}
+
+.quiz-container {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.quiz-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.progress-bar {
+    transition: width 0.5s ease;
+}
+
+.question-container {
+    transition: all 0.4s ease;
+    transform-origin: center;
+}
+
+.option-btn {
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.option-btn:hover {
+    transform: translateX(5px);
+    background-color: #f3f4f6;
+    border-left-color: #667eea;
+}
+
+.option-btn.selected {
+    border-left-color: #667eea;
+    background-color: #eff6ff;
+}
+
+.option-btn.correct {
+    border-left-color: #10b981;
+    background-color: #d1fae5;
+}
+
+.option-btn.incorrect {
+    border-left-color: #ef4444;
+    background-color: #fee2e2;
+}
+
+.next-btn, .restart-btn, .solutions-btn {
+    transition: all 0.3s ease;
+}
+
+.next-btn:hover, .restart-btn:hover, .solutions-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.difficulty-badge {
+    transition: all 0.3s ease;
+}
+
+.difficulty-1 { background-color: #22c55e; }
+.difficulty-2 { background-color: #f59e0b; }
+.difficulty-3 { background-color: #ef4444; }
+
+.stats-card {
+    transition: all 0.3s ease;
+    transform-origin: center;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.animate-pulse {
+    animation: pulse 0.5s ease;
+}
+
+.feedback-message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.feedback-message.show {
+    opacity: 1;
+} 
