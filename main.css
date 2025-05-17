@@ -24,15 +24,24 @@ body {
     transform-origin: center;
 }
 
+/* Option buttons - Enhanced states */
 .option-btn {
     transition: all 0.2s ease;
     border-left: 4px solid transparent;
+    position: relative;
+    overflow: hidden;
 }
 
 .option-btn:hover {
     transform: translateX(5px);
     background-color: #f3f4f6;
     border-left-color: #667eea;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.option-btn:active {
+    transform: translateX(3px);
+    background-color: #e5e7eb;
 }
 
 .option-btn.selected {
@@ -50,13 +59,57 @@ body {
     background-color: #fee2e2;
 }
 
+/* Navigation buttons - Enhanced states */
 .next-btn, .restart-btn, .solutions-btn {
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .next-btn:hover, .restart-btn:hover, .solutions-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.next-btn:active, .restart-btn:active, .solutions-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Disabled button states */
+.next-btn:disabled, .restart-btn:disabled, .solutions-btn:disabled, .option-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.next-btn:disabled:hover, .restart-btn:disabled:hover, .solutions-btn:disabled:hover, .option-btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+    background-color: inherit;
+}
+
+/* Button focus states for accessibility */
+.next-btn:focus, .restart-btn:focus, .solutions-btn:focus, .option-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+
+/* Special button effects */
+.next-btn::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: -100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: 0.5s;
+}
+
+.next-btn:hover::after {
+    left: 100%;
 }
 
 .difficulty-badge {
