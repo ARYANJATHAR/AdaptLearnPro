@@ -1,58 +1,14 @@
-# Adaptive Difficulty Quiz App
+# AI Quiz Website
 
-A simple interactive quiz application with adaptive difficulty levels that adjust based on user performance.
+This website is an interactive quiz platform that challenges users with a series of questions and adapts the difficulty based on their performance. As you answer questions, the quiz intelligently adjusts to present easier or harder questions, aiming to match your skill level and provide an engaging experience.
 
-## Features
+The site provides immediate feedback after each answer, visually tracks your progress, and summarizes your results at the end. After completing the quiz, you can review each question with detailed explanations for the correct answers. The design is responsive and visually appealing, ensuring a smooth experience on both desktop and mobile devices.
 
-- Questions adapt to user's skill level (Easy, Medium, Hard)
-- Real-time feedback on answers
-- Visual progress tracking
-- Comprehensive results summary
-- Solution review with detailed explanations
-- Responsive design using Tailwind CSS
+Key features include:
+- Adaptive difficulty: Questions become easier or harder depending on your answers.
+- Real-time feedback: Instantly know if your answer is correct or not.
+- Progress tracking: See how far you've come in the quiz.
+- Results summary: Get a comprehensive overview of your performance at the end.
+- Solution review: Learn from detailed explanations for each question after finishing the quiz.
 
-## Project Structure
-
-The project is organized into the following components:
-
-```
-ai_quiz_app/
-├── index.html          # Main HTML entry point
-├── styles/
-│   └── main.css        # Custom CSS styles
-├── js/
-│   ├── app.js          # Application initialization
-│   ├── quiz.js         # Core quiz functionality
-│   ├── questions.js    # Question database
-│   └── templates.js    # HTML templates for UI components
-└── README.md           # Project documentation
-```
-
-## Component Breakdown
-
-### HTML Structure
-- `index.html`: The main container with placeholder elements for dynamic content
-
-### JavaScript Components
-- `questions.js`: Contains the question database organized by difficulty levels
-- `templates.js`: Provides HTML templates for different UI components
-- `quiz.js`: Core quiz logic and functionality as a reusable class
-- `app.js`: Initializes the application
-
-### Styling
-- `main.css`: Custom styles for quiz components and animations
-
-## How to Use
-
-1. Simply open `index.html` in a web browser
-2. Answer questions to the best of your ability
-3. The difficulty will automatically adjust based on your performance
-4. View your final score and review solutions at the end
-
-## Technologies Used
-
-- HTML5
-- CSS3 with Tailwind CSS
-- Vanilla JavaScript (ES6+)
-- Font Awesome icons
-- Google Fonts (Poppins) 
+This website is designed for anyone who wants to test and improve their knowledge in a fun, dynamic way. 
