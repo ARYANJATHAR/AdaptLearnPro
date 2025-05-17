@@ -9,21 +9,28 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="../css/main.css">
 </head>
 <body class="bg-gray-100 p-4">
-    <div id="feedback-message" class="feedback-message px-6 py-3 rounded-lg shadow-lg"></div>
+    <div id="feedback-message" class="feedback-message"></div>
     
     <div class="container mx-auto max-w-4xl">
         <div class="quiz-container bg-white shadow-lg rounded-xl overflow-hidden">
             <!-- Quiz Header -->
-            <div class="quiz-header text-white p-6 relative">
-                <h1 class="text-3xl font-bold mb-2">AdaptLearn Pro</h1>
+            <div class="quiz-header text-white relative">
+                <div class="flex justify-between items-center mb-2">
+                    <h1 class="text-3xl font-bold">AdaptLearn Pro</h1>
+                    <button id="sound-toggle" class="sound-toggle p-2 bg-white bg-opacity-20 rounded-full hover:bg-opacity-30 transition-all">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                </div>
                 <p class="opacity-90 mb-4">Test your knowledge with questions that adapt to your skill level</p>
+                
+                <!-- Enhanced Progress Bar -->
                 <div class="flex flex-wrap gap-2 items-center">
                     <span id="progress-text" class="text-sm font-medium">Question 1 of 10</span>
-                    <div class="flex-grow bg-white bg-opacity-30 rounded-full h-2.5 ml-2">
-                        <div id="progress-bar" class="progress-bar bg-white h-2.5 rounded-full" style="width: 10%"></div>
+                    <div class="flex-grow progress-container">
+                        <div id="progress-bar" class="progress-bar" style="width: 10%"></div>
                     </div>
                 </div>
             </div>
@@ -75,9 +82,10 @@
             
             <!-- Question Content -->
             <div class="p-6">
-                <div id="question-container" class="question-container mb-6">
-                    <h2 id="question-text" class="text-xl font-semibold mb-4">Loading question...</h2>
-                    <div id="options-container" class="space-y-3"></div>
+                <!-- Question Card Layout -->
+                <div id="question-container" class="question-container">
+                    <h2 id="question-text" class="text-xl font-semibold">Loading question...</h2>
+                    <div id="options-container"></div>
                 </div>
                 
                 <!-- Quiz Navigation -->
@@ -139,12 +147,11 @@
         
         <!-- Footer -->
         <div class="mt-6 text-center text-gray-500 text-sm">
-            <p>© 2023 AdaptLearn Pro | Interactive Skill Assessment</p>
+            <p>© 2025 AdaptLearn Pro | Interactive Skill Assessment</p>
         </div>
     </div>
     
     <!-- Scripts -->
-    <script src="questions.js"></script>
-    <script src="app.js"></script>
+    <script type="module" src="../js/main/app.js"></script>
 </body>
 </html> 

@@ -81,4 +81,10 @@ const questions = {
             correctAnswer: 0
         }
     ]
-}; 
+};
+
+// Make questions available globally for the QuizLogic module
+window.questions = questions;
+
+// Also export for ES modules
+export { questions }; 

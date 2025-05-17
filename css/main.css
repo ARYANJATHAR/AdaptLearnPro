@@ -9,19 +9,56 @@ body {
     border-radius: 16px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    max-width: 100%;
+    margin: 0 auto;
 }
 
 .quiz-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1.5rem;
+}
+
+/* Enhanced Progress Bar */
+.progress-container {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    height: 8px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+    position: relative;
 }
 
 .progress-bar {
     transition: width 0.5s ease;
+    height: 100%;
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
+/* Question Card Layout */
 .question-container {
     transition: all 0.4s ease;
     transform-origin: center;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+#question-text {
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+/* Option Button Cards */
+#options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 /* Option buttons - Enhanced states */
@@ -30,6 +67,9 @@ body {
     border-left: 4px solid transparent;
     position: relative;
     overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    padding: 1rem 1.25rem;
 }
 
 .option-btn:hover {
@@ -64,6 +104,7 @@ body {
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    border-radius: 8px;
 }
 
 .next-btn:hover, .restart-btn:hover, .solutions-btn:hover {
@@ -130,6 +171,15 @@ body {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
+/* Results cards */
+#solutions-list .solution-item {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -149,6 +199,39 @@ body {
     animation: pulse 0.5s ease;
 }
 
+/* Sound Toggle Button */
+.sound-toggle {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.sound-toggle:hover {
+    transform: scale(1.1);
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.sound-toggle:active {
+    transform: scale(0.95);
+}
+
+/* Confetti Canvas */
+#confetti-canvas {
+    pointer-events: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+}
+
+/* Enhanced Feedback Message (Toaster) */
 .feedback-message {
     position: fixed;
     top: 20px;
@@ -157,8 +240,103 @@ body {
     z-index: 100;
     opacity: 0;
     transition: opacity 0.3s ease;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+    min-width: 180px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .feedback-message.show {
     opacity: 1;
+}
+
+/* Specific feedback message colors with better contrast */
+.feedback-message.bg-green-500 {
+    background-color: #10b981;
+    color: white;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.feedback-message.bg-red-500 {
+    background-color: #ef4444;
+    color: white;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.feedback-message.bg-blue-500 {
+    background-color: #3b82f6;
+    color: white;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .quiz-container {
+        border-radius: 12px;
+        margin: 0.5rem;
+    }
+    
+    .quiz-header {
+        padding: 1rem;
+    }
+    
+    .quiz-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .stats-card {
+        min-width: 100px;
+        padding: 0.75rem;
+    }
+    
+    #navigation {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    #navigation button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .question-container {
+        padding: 1rem;
+    }
+    
+    #options-container {
+        gap: 0.5rem;
+    }
+    
+    .option-btn {
+        padding: 0.75rem 1rem;
+    }
+    
+    .feedback-message {
+        width: 90%;
+        max-width: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 0.5rem;
+    }
+    
+    .quiz-container {
+        border-radius: 8px;
+    }
+    
+    .p-4, .p-6 {
+        padding: 0.75rem !important;
+    }
+    
+    .stats-card {
+        min-width: auto;
+        flex: 1 1 calc(50% - 0.5rem);
+    }
 } 
