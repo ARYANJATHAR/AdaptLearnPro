@@ -2,9 +2,21 @@
 import { State } from './State.js';
 
 export const AudioManager = {
-    correctSound: new Audio('../assets/audio/correct.mp3'),
-    incorrectSound: new Audio('../assets/audio/wrong.mp3'),
-    completionSound: new Audio('../assets/audio/completion.mp3'),
+    correctSound: null,
+    incorrectSound: null,
+    completionSound: null,
+    
+    init() {
+        try {
+            this.correctSound = new Audio('../assets/audio/correct.mp3');
+            this.incorrectSound = new Audio('../assets/audio/wrong.mp3');
+            this.completionSound = new Audio('../assets/audio/completion.mp3');
+            return true;
+        } catch (error) {
+            console.error('Failed to initialize audio:', error);
+            return false;
+        }
+    },
     
     playCorrect() {
         if (State.soundEnabled) {

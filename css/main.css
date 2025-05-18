@@ -368,4 +368,20 @@ body {
         min-width: auto;
         flex: 1 1 calc(50% - 0.5rem);
     }
+}
+
+@media (max-width: 360px) {
+    .quiz-container {
+        margin: 0.5rem;
+        padding: 0.5rem;
+    }
+    
+    .stats-card {
+        min-width: 100%;
+        padding: 0.75rem;
+    }
+    
+    .option-btn {
+        padding: 0.75rem;
+    }
 } 

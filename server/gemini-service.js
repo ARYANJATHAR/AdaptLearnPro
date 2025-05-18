@@ -117,28 +117,48 @@ async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
         const response = await result.response;
         const text = response.text();
         
-        // Extract JSON from the response
-        const jsonMatch = text.match(/\[\s*\{.*\}\s*\]/s);
-        if (!jsonMatch) {
-            console.error('AI response did not contain valid JSON. Raw response:', text);
-            throw new Error('Unable to parse quiz questions from AI response');
-        }
-        
+        // Try multiple approaches to extract JSON
+        let questions;
         try {
-            // Parse and return the questions
-            const questions = JSON.parse(jsonMatch[0]);
+            // First try: direct JSON parse of the entire response
+            try {
+                questions = JSON.parse(text);
+            } catch (e) {
+                // Second try: find JSON array pattern
+                const jsonMatch = text.match(/\[\s*\{[^]*\}\s*\]/);
+                if (jsonMatch) {
+                    questions = JSON.parse(jsonMatch[0]);
+                } else {
+                    // Third try: look for individual question objects
+                    const questionMatches = text.match(/\{[^}]+\}/g);
+                    if (questionMatches) {
+                        questions = questionMatches.map(q => JSON.parse(q));
+                    } else {
+                        throw new Error('No valid JSON found in response');
+                    }
+                }
+            }
             
             // Validate the questions format
-            const validQuestions = questions.filter(q => 
-                q.question && 
-                Array.isArray(q.options) && 
-                q.options.length === 4 &&
-                typeof q.correctAnswer === 'number' &&
-                q.correctAnswer >= 0 && 
-                q.correctAnswer <= 3
-            );
+            const validQuestions = questions.filter(q => {
+                try {
+                    return (
+                        q.question && 
+                        typeof q.question === 'string' &&
+                        Array.isArray(q.options) && 
+                        q.options.length === 4 &&
+                        q.options.every(opt => typeof opt === 'string') &&
+                        typeof q.correctAnswer === 'number' &&
+                        q.correctAnswer >= 0 && 
+                        q.correctAnswer <= 3
+                    );
+                } catch (e) {
+                    return false;
+                }
+            });
             
             if (validQuestions.length === 0) {
+                console.error('No valid questions found in:', text);
                 throw new Error('No valid questions generated');
             }
             
@@ -156,10 +176,17 @@ async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
             
             console.log(`Generated ${uniqueQuestions.length} unique questions (filtered from ${validQuestions.length})`);
             
-            return uniqueQuestions;
+            // If we don't have enough questions, but have some valid ones, return what we have
+            if (uniqueQuestions.length < count && uniqueQuestions.length > 0) {
+                console.log(`Warning: Only generated ${uniqueQuestions.length} questions instead of requested ${count}`);
+                return uniqueQuestions;
+            }
+            
+            return uniqueQuestions.slice(0, count);
             
         } catch (parseError) {
-            console.error('Error parsing JSON from AI response:', parseError);
+            console.error('Error parsing AI response:', parseError);
+            console.error('Raw response:', text);
             throw new Error('Failed to parse question data from AI response');
         }
         

@@ -28,6 +28,9 @@ export const QuizLogic = {
         State.answerSubmitted = false;
         State.selectedAnswerIndex = null;
         
+        // Start timing for the new question
+        State.currentQuestionStartTime = Date.now();
+        
         // Apply fade out effect
         UI.questionContainer.style.opacity = '0';
         
@@ -102,13 +105,18 @@ export const QuizLogic = {
         State.answerSubmitted = true;
         const isCorrect = State.selectedAnswerIndex === State.currentQuestion.correctAnswer;
         
+        // Calculate answer time
+        const answerTime = Math.round((Date.now() - State.currentQuestionStartTime) / 1000);
+        State.fastestAnswerTime = Math.min(State.fastestAnswerTime, answerTime);
+        
         // Track user's answer for review
         State.userSelections.push({
             question: State.currentQuestion.question,
             options: State.currentQuestion.options,
             correctAnswer: State.currentQuestion.correctAnswer,
             userAnswer: State.selectedAnswerIndex,
-            isCorrect: isCorrect
+            isCorrect: isCorrect,
+            answerTime: answerTime
         });
         
         // Store question in history
@@ -116,7 +124,8 @@ export const QuizLogic = {
             question: State.currentQuestion,
             userAnswer: State.selectedAnswerIndex,
             isCorrect: isCorrect,
-            difficulty: State.currentDifficulty
+            difficulty: State.currentDifficulty,
+            answerTime: answerTime
         });
         
         // First apply styling to options
@@ -202,6 +211,9 @@ export const QuizLogic = {
     },
     
     endQuiz() {
+        // Calculate total quiz time
+        State.totalQuizTime = Math.round((Date.now() - State.quizStartTime) / 1000);
+        
         // Hide question container and navigation
         UI.navigationDiv.classList.add('hidden');
         
@@ -251,21 +263,99 @@ export const QuizLogic = {
         const questionResults = State.questionHistory.map(item => ({
             question: item.question.question,
             correct: item.isCorrect,
-            difficulty: item.difficulty
+            difficulty: item.difficulty,
+            answerTime: item.answerTime
         }));
         
-        // Find topics to work on (incorrect answers grouped by topic)
+        // Store quiz type
+        const isAIQuiz = this.useCustomQuestions;
+        
+        // Find topics to work on based on incorrect answers
         const incorrectQuestions = State.questionHistory.filter(item => !item.isCorrect);
-        const topicsToWorkOn = [
-            { 
-                name: "Sample Topic 1", 
-                description: "This is a placeholder. In a real implementation, this would be derived from the question data."
-            },
-            { 
-                name: "Sample Topic 2", 
-                description: "Another placeholder topic derived from question analysis."
+        const topicsToWorkOn = [];
+
+        // Helper function to add a topic if questions match certain keywords
+        const addTopicIfRelevant = (questions, keywords, topicName, description) => {
+            const hasRelevantQuestions = questions.some(q => 
+                keywords.some(keyword => q.question.question.toLowerCase().includes(keyword))
+            );
+            if (hasRelevantQuestions) {
+                topicsToWorkOn.push({ name: topicName, description });
             }
-        ];
+        };
+
+        // Basic Knowledge
+        addTopicIfRelevant(
+            incorrectQuestions,
+            ['capital', '2 + 2', 'largest ocean'],
+            "Basic Facts & Geography",
+            "Review basic geography, simple mathematics, and general knowledge questions."
+        );
+
+        // Literature & Arts
+        addTopicIfRelevant(
+            incorrectQuestions,
+            ['wrote', 'romeo', 'shakespeare'],
+            "Literature & Arts",
+            "Focus on famous authors, classic literature, and artistic works."
+        );
+
+        // Science & Space
+        addTopicIfRelevant(
+            incorrectQuestions,
+            ['planet', 'sun', 'mercury', 'venus'],
+            "Astronomy & Space",
+            "Study the solar system, planets, and their characteristics."
+        );
+
+        // Physics & Scientific Theory
+        addTopicIfRelevant(
+            incorrectQuestions,
+            ['scientist', 'einstein', 'theory', 'quantum', 'uncertainty'],
+            "Physics & Scientific Theory",
+            "Review important scientific theories, quantum mechanics, and famous scientists."
+        );
+
+        // Chemistry
+        addTopicIfRelevant(
+            incorrectQuestions,
+            ['element', 'chemical', 'symbol', 'potassium'],
+            "Chemistry",
+            "Study chemical elements, their symbols, and basic chemistry concepts."
+        );
+
+        // Mathematics & Algorithms
+        addTopicIfRelevant(
+            incorrectQuestions,
+            ['square root', 'sorting', 'algorithm'],
+            "Mathematics & Computer Science",
+            "Practice mathematical calculations and algorithmic concepts."
+        );
+
+        // History
+        addTopicIfRelevant(
+            incorrectQuestions,
+            ['war', 'world war', '1945', '1957', 'sputnik'],
+            "Historical Events",
+            "Review important historical dates, events, and their significance."
+        );
+
+        // Physics Forces
+        addTopicIfRelevant(
+            incorrectQuestions,
+            ['force', 'gravity', 'electromagnetic'],
+            "Physics Forces",
+            "Study fundamental forces in physics and their applications."
+        );
+
+        // If no specific topics identified but there are incorrect answers
+        if (topicsToWorkOn.length === 0 && incorrectQuestions.length > 0) {
+            const question = incorrectQuestions[0].question.question;
+            topicsToWorkOn.push({
+                name: "Question Review",
+                description: `Review this question: "${question}"`
+            });
+        }
         
         // Calculate hotstreak
         let maxStreak = 0;
@@ -286,11 +376,12 @@ export const QuizLogic = {
             incorrect: State.totalIncorrect,
             score: Math.round((State.totalCorrect / State.totalAttempted) * 100),
             highestDifficulty: State.highestDifficulty,
-            timeTaken: 780, // Placeholder - would need a timer implementation
-            fastestAnswer: 7, // Placeholder - would need timing data for questions
+            timeTaken: State.totalQuizTime,
+            fastestAnswer: State.fastestAnswerTime === Infinity ? 0 : State.fastestAnswerTime,
             hotstreak: maxStreak,
             questionResults: questionResults,
-            topicsToWorkOn: topicsToWorkOn
+            topicsToWorkOn: topicsToWorkOn,
+            isAIQuiz: isAIQuiz
         };
         
         // Store in session storage

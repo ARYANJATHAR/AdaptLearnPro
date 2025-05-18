@@ -23,14 +23,16 @@ function setupTopicToggles() {
             const icon = toggle.querySelector('i');
             
             // Toggle details visibility
-            if (detailsSection.classList.contains('hidden')) {
-                detailsSection.classList.remove('hidden');
-                icon.classList.remove('fa-chevron-right');
-                icon.classList.add('fa-chevron-down');
-            } else {
-                detailsSection.classList.add('hidden');
-                icon.classList.remove('fa-chevron-down');
-                icon.classList.add('fa-chevron-right');
+            if (detailsSection) {
+                if (detailsSection.classList.contains('hidden')) {
+                    detailsSection.classList.remove('hidden');
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-chevron-down');
+                } else {
+                    detailsSection.classList.add('hidden');
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-right');
+                }
             }
         });
     });
@@ -40,21 +42,44 @@ function setupTopicToggles() {
  * Set up button click handlers
  */
 function setupButtonHandlers() {
-    // Retry quiz button
-    const buttons = document.querySelectorAll('button');
-    if (buttons.length >= 3) {
-        // Retry Quiz (first button)
-        buttons[buttons.length - 3].addEventListener('click', () => {
-            window.location.href = './index.html';
+    // Get the action buttons
+    const retryButton = document.querySelector('button.bg-indigo-600');
+    const newQuizButton = document.querySelector('button.border-indigo-600');
+    
+    // Setup retry button
+    if (retryButton) {
+        retryButton.addEventListener('click', () => {
+            // Get quiz type from results data
+            const resultsData = sessionStorage.getItem('quizResults');
+            let isAIQuiz = false;
+            
+            if (resultsData) {
+                try {
+                    const data = JSON.parse(resultsData);
+                    isAIQuiz = data.isAIQuiz;
+                } catch (error) {
+                    console.error('Error parsing quiz results:', error);
+                }
+            }
+            
+            // Route based on quiz type
+            if (isAIQuiz) {
+                // For AI quiz, keep the topic and go back to ai-quiz.html
+                window.location.href = './ai-quiz.html';
+            } else {
+                // For sample quiz, go back to index.html
+                window.location.href = './index.html';
+            }
         });
-        
-        // Similar Quiz (second button)
-        buttons[buttons.length - 2].addEventListener('click', () => {
-            alert('Similar quiz feature is coming soon!');
-        });
-        
-        // New Quiz (third button)
-        buttons[buttons.length - 1].addEventListener('click', () => {
+    }
+    
+    // Setup new quiz button
+    if (newQuizButton) {
+        newQuizButton.addEventListener('click', () => {
+            // Clear any existing quiz topic and results when starting fresh
+            localStorage.removeItem('quizTopic');
+            sessionStorage.removeItem('quizResults');
+            // Always go to home page for new quiz
             window.location.href = './home.html';
         });
     }
@@ -87,41 +112,68 @@ function updateResultsUI(data) {
     if (!data) return;
     
     // Update score
-    const scoreElements = document.querySelector('.text-6xl').children;
+    const scoreElements = document.querySelector('.flex.justify-center.text-5xl.font-bold').children;
     if (scoreElements && scoreElements.length >= 2) {
         scoreElements[0].textContent = data.correct;
         scoreElements[1].textContent = `/${data.total}`;
     }
     
     // Update accuracy text
-    const paragraphs = document.querySelectorAll('p');
-    if (paragraphs.length > 0) {
-        const resultParagraph = paragraphs[0]; 
-        
-        // Parse the HTML to retain structure but update values
-        if (resultParagraph) {
-            const correctSpan = resultParagraph.querySelector('span:nth-child(1)');
-            const totalSpan = resultParagraph.querySelector('span:nth-child(2)');
-            const percentSpan = resultParagraph.querySelector('span:nth-child(3)');
-            
-            if (correctSpan) correctSpan.textContent = data.correct;
-            if (totalSpan) totalSpan.textContent = data.total;
-            if (percentSpan) percentSpan.textContent = `${Math.round((data.correct / data.total) * 100)}%`;
+    const resultParagraph = document.querySelector('.text-gray-700.mb-3');
+    if (resultParagraph) {
+        const spans = resultParagraph.querySelectorAll('span');
+        if (spans.length >= 3) {
+            spans[0].textContent = data.correct;
+            spans[1].textContent = data.total;
+            spans[2].textContent = `${Math.round((data.correct / data.total) * 100)}%`;
         }
     }
     
     // Update indicators
-    const indicatorContainer = document.querySelector('.flex.flex-wrap.justify-center.gap-2.mb-4');
+    const indicatorContainer = document.querySelector('.flex.flex-wrap.justify-center.gap-2.mb-3');
     if (indicatorContainer && data.questionResults) {
         updateQuestionIndicators(data.questionResults, indicatorContainer);
     }
     
     // Update stats
-    const statValues = document.querySelectorAll('.text-4xl.font-bold');
+    const statValues = document.querySelectorAll('.text-3xl.font-bold');
     if (statValues && statValues.length >= 3) {
         if (data.timeTaken) statValues[0].textContent = formatTime(data.timeTaken);
         if (data.fastestAnswer) statValues[1].textContent = `${data.fastestAnswer}s`;
         if (data.hotstreak) statValues[2].textContent = data.hotstreak;
+    }
+
+    // Update topics
+    const topicsContainer = document.getElementById('topics-container');
+    if (topicsContainer && data.topicsToWorkOn) {
+        // Clear existing topics
+        topicsContainer.innerHTML = '';
+        
+        // Add each topic
+        data.topicsToWorkOn.forEach((topic, index) => {
+            const topicElement = document.createElement('div');
+            topicElement.className = 'bg-gray-50 rounded-lg p-3';
+            
+            const topicHTML = `
+                <div class="flex items-center">
+                    <button class="topic-toggle mr-2 text-gray-400" data-topic-index="${index}">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <h3 class="text-sm font-medium">${topic.name}</h3>
+                </div>
+                <div class="topic-details ml-6 mt-2 hidden">
+                    <p class="text-gray-600 text-sm">
+                        ${topic.description}
+                    </p>
+                </div>
+            `;
+            
+            topicElement.innerHTML = topicHTML;
+            topicsContainer.appendChild(topicElement);
+        });
+        
+        // Re-attach toggle listeners
+        setupTopicToggles();
     }
 }
 
@@ -137,10 +189,10 @@ function updateQuestionIndicators(results, container) {
     // Create new indicators
     results.forEach(result => {
         const indicator = document.createElement('div');
-        indicator.className = `w-8 h-8 ${result.correct ? 'bg-green-600' : 'bg-red-600'} rounded-md flex items-center justify-center text-white`;
+        indicator.className = `w-7 h-7 ${result.correct ? 'bg-green-600' : 'bg-red-600'} rounded-md flex items-center justify-center text-white`;
         
         const icon = document.createElement('i');
-        icon.className = result.correct ? 'fas fa-check' : 'fas fa-times';
+        icon.className = `fas ${result.correct ? 'fa-check' : 'fa-times'}`;
         
         indicator.appendChild(icon);
         container.appendChild(indicator);

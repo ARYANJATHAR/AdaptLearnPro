@@ -16,6 +16,12 @@ export const State = {
     answerSubmitted: false,
     soundEnabled: true,
     
+    // Timing related state
+    quizStartTime: null,
+    currentQuestionStartTime: null,
+    fastestAnswerTime: Infinity,
+    totalQuizTime: 0,
+    
     reset() {
         this.currentDifficulty = 1;
         this.correctStreak = 0;
@@ -27,5 +33,11 @@ export const State = {
         this.highestDifficulty = 1;
         this.userSelections = [];
         this.questionHistory = [];
+        
+        // Reset timing data
+        this.quizStartTime = Date.now();
+        this.currentQuestionStartTime = Date.now();
+        this.fastestAnswerTime = Infinity;
+        this.totalQuizTime = 0;
     }
 }; 

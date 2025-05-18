@@ -254,9 +254,7 @@ const AIQuizApp = {
         UI.nextButton.addEventListener('click', () => QuizLogic.loadNextQuestion());
         
         UI.restartButton.addEventListener('click', () => {
-            if (confirm('Are you sure you want to restart the quiz? Your progress will be lost.')) {
-                this.restartWithNewQuestions();
-            }
+            UI.showRestartModal(() => this.restartWithNewQuestions());
         });
         
         UI.restartFinalButton.addEventListener('click', () => this.restartWithNewQuestions());

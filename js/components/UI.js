@@ -28,6 +28,9 @@ export const UI = {
     highestDifficultyDisplay: null,
     feedbackMessage: null,
     soundToggle: null,
+    restartModal: null,
+    restartConfirmBtn: null,
+    restartCancelBtn: null,
     
     // Initialize UI elements
     init() {
@@ -55,6 +58,14 @@ export const UI = {
         this.highestDifficultyDisplay = document.getElementById('highest-difficulty');
         this.feedbackMessage = document.getElementById('feedback-message');
         this.soundToggle = document.getElementById('sound-toggle');
+        
+        // Initialize modal elements
+        this.restartModal = document.getElementById('restart-modal');
+        this.restartConfirmBtn = document.getElementById('restart-confirm');
+        this.restartCancelBtn = document.getElementById('restart-cancel');
+        
+        // Set up modal event listeners
+        this.setupModalListeners();
     },
     
     updateStats() {
@@ -193,5 +204,48 @@ export const UI = {
                 this.solutionsButton.innerHTML = '<i class="fas fa-eye mr-2"></i><span>View Solutions</span>';
             }
         }, { once: true });
+    },
+    
+    showRestartModal(onConfirm) {
+        if (!this.restartModal) return;
+        
+        const confirmHandler = () => {
+            this.hideRestartModal();
+            onConfirm();
+            // Remove the one-time event listener
+            this.restartConfirmBtn.removeEventListener('click', confirmHandler);
+        };
+        
+        // Add one-time event listener for confirm button
+        this.restartConfirmBtn.addEventListener('click', confirmHandler);
+        
+        // Show the modal
+        this.restartModal.classList.remove('hidden');
+    },
+    
+    hideRestartModal() {
+        if (!this.restartModal) return;
+        this.restartModal.classList.add('hidden');
+    },
+    
+    setupModalListeners() {
+        if (!this.restartModal) return;
+        
+        // Close modal when clicking cancel button
+        this.restartCancelBtn.addEventListener('click', () => this.hideRestartModal());
+        
+        // Close modal when clicking outside
+        this.restartModal.addEventListener('click', (e) => {
+            if (e.target === this.restartModal) {
+                this.hideRestartModal();
+            }
+        });
+        
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !this.restartModal.classList.contains('hidden')) {
+                this.hideRestartModal();
+            }
+        });
     }
 }; 
