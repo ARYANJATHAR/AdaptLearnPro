@@ -45,6 +45,8 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     padding: 1.5rem;
     margin-bottom: 1.5rem;
+    position: relative;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 #question-text {
@@ -155,11 +157,38 @@ body {
 
 .difficulty-badge {
     transition: all 0.3s ease;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 10px;
 }
 
-.difficulty-1 { background-color: #22c55e; }
-.difficulty-2 { background-color: #f59e0b; }
-.difficulty-3 { background-color: #ef4444; }
+.difficulty-1 {
+    background-color: #4ADE80;
+}
+
+.difficulty-2 {
+    background-color: #F59E0B;
+}
+
+.difficulty-3 {
+    background-color: #EF4444;
+}
+
+/* Question difficulty styling */
+.difficulty-level-1 .question-container {
+    box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+    background-color: rgba(74, 222, 128, 0.05);
+}
+
+.difficulty-level-2 .question-container {
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+    background-color: rgba(245, 158, 11, 0.05);
+}
+
+.difficulty-level-3 .question-container {
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    background-color: rgba(239, 68, 68, 0.05);
+}
 
 .stats-card {
     transition: all 0.3s ease;

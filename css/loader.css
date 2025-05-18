@@ -1,0 +1,139 @@
+/* Dynamic Loader Animation */
+.loader-circle {
+    position: relative;
+    width: 70px;
+    height: 70px;
+    animation: rotate 2s linear infinite;
+    margin: 0 auto;
+}
+
+.loader-dot {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #6366f1; /* Indigo color */
+    animation: scale-pulse 1.2s ease-in-out infinite;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+.loader-dot-1 {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    animation-delay: 0s;
+}
+
+.loader-dot-2 {
+    top: 25%;
+    right: 10%;
+    animation-delay: -0.2s;
+}
+
+.loader-dot-3 {
+    bottom: 25%;
+    right: 10%;
+    animation-delay: -0.4s;
+}
+
+.loader-dot-4 {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    animation-delay: -0.6s;
+}
+
+.loader-dot-5 {
+    bottom: 25%;
+    left: 10%;
+    animation-delay: -0.8s;
+}
+
+.loader-dot-6 {
+    top: 25%;
+    left: 10%;
+    animation-delay: -1s;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes scale-pulse {
+    0%, 100% {
+        transform: scale(0.7);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Progress bar animation */
+.progress-loading-bar {
+    transition: width 0.5s ease;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    background-size: 200% 200%;
+    animation: gradient-shift 2s ease infinite;
+    box-shadow: 0 0 5px rgba(99, 102, 241, 0.3);
+}
+
+@keyframes gradient-shift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Make loader responsive */
+@media (max-width: 768px) {
+    .loader-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .loader-dot {
+        width: 10px;
+        height: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .loader-circle {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .loader-dot {
+        width: 8px;
+        height: 8px;
+    }
+}
+
+/* Spinner fade-in animation */
+.spinner {
+    opacity: 0;
+    animation: fade-in 0.5s ease forwards;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+} 

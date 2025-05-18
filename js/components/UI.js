@@ -68,6 +68,11 @@ export const UI = {
         this.difficultyBadge.textContent = State.currentDifficulty === 1 ? 'Easy' : 
                                      State.currentDifficulty === 2 ? 'Medium' : 'Hard';
         
+        // Update question container difficulty styling
+        const quizContent = document.getElementById('quiz-content');
+        quizContent.className = quizContent.className.replace(/difficulty-level-\d/g, '');
+        quizContent.classList.add(`difficulty-level-${State.currentDifficulty}`);
+        
         // Update progress
         this.progressBar.style.width = `${(State.totalAttempted / State.totalQuestions) * 100}%`;
         this.progressText.textContent = `Question ${State.totalAttempted} of ${State.totalQuestions}`;

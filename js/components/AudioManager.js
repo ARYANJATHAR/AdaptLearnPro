@@ -2,9 +2,9 @@
 import { State } from './State.js';
 
 export const AudioManager = {
-    correctSound: new Audio('../../assets/correct.mp3'),
-    incorrectSound: new Audio('../../assets/wrong.mp3'),
-    completionSound: new Audio('../../assets/correct.mp3'),
+    correctSound: new Audio('../assets/audio/correct.mp3'),
+    incorrectSound: new Audio('../assets/audio/wrong.mp3'),
+    completionSound: new Audio('../assets/audio/completion.mp3'),
     
     playCorrect() {
         if (State.soundEnabled) {

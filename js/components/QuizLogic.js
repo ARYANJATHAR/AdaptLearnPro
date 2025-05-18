@@ -6,6 +6,10 @@ import { ConfettiManager } from './ConfettiManager.js';
 import { questions } from '../main/questions.js';
 
 export const QuizLogic = {
+    // For AI-generated questions
+    customQuestions: null,
+    useCustomQuestions: false,
+    
     initQuiz() {
         State.reset();
         UI.updateStats();
@@ -22,17 +26,20 @@ export const QuizLogic = {
         UI.questionContainer.style.opacity = '0';
         
         setTimeout(() => {
+            // Determine which question set to use
+            const questionSet = this.useCustomQuestions ? this.customQuestions : questions;
+            
             // Get available questions at current difficulty
-            let availableQuestions = questions[State.currentDifficulty].filter(
+            let availableQuestions = questionSet[State.currentDifficulty]?.filter(
                 q => !State.answeredQuestions.includes(q.question)
-            );
+            ) || [];
             
             // If no more questions at current difficulty, try other difficulties
             if (availableQuestions.length === 0) {
-                const allDifficulties = Object.keys(questions).map(Number);
+                const allDifficulties = Object.keys(questionSet).map(Number);
                 for (const diff of allDifficulties) {
-                    if (diff !== State.currentDifficulty) {
-                        availableQuestions = questions[diff].filter(
+                    if (diff !== State.currentDifficulty && questionSet[diff]) {
+                        availableQuestions = questionSet[diff].filter(
                             q => !State.answeredQuestions.includes(q.question)
                         );
                         if (availableQuestions.length > 0) break;

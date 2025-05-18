@@ -1,5 +1,5 @@
 // Quiz Questions by difficulty level
-const questions = {
+export const questions = {
     1: [ // Easy questions
         {
             question: "What is the capital of France?",
@@ -83,8 +83,5 @@ const questions = {
     ]
 };
 
-// Make questions available globally for the QuizLogic module
-window.questions = questions;
-
-// Also export for ES modules
-export { questions }; 
+// Debug log
+console.log('Questions loaded:', questions); 
