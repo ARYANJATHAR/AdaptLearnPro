@@ -8,6 +8,7 @@ export const UI = {
     questionText: null,
     optionsContainer: null,
     nextButton: null,
+    backButton: null,
     restartButton: null,
     restartFinalButton: null,
     solutionsButton: null,
@@ -38,13 +39,27 @@ export const UI = {
         this.questionText = document.getElementById('question-text');
         this.optionsContainer = document.getElementById('options-container');
         this.nextButton = document.getElementById('next-btn');
+        this.navigationDiv = document.getElementById('navigation');
+        
+        // Create back button if it doesn't exist
+        if (!this.backButton) {
+            this.backButton = document.createElement('button');
+            this.backButton.id = 'back-btn';
+            this.backButton.className = 'px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors mr-2';
+            this.backButton.innerHTML = '<i class="fas fa-arrow-left mr-1"></i>Back';
+            
+            // Insert back button before next button
+            if (this.nextButton && this.nextButton.parentNode) {
+                this.nextButton.parentNode.insertBefore(this.backButton, this.nextButton);
+            }
+        }
+        
         this.restartButton = document.getElementById('restart-btn');
         this.restartFinalButton = document.getElementById('final-restart-btn');
         this.solutionsButton = document.getElementById('solutions-btn');
         this.solutionsContainer = document.getElementById('solutions-container');
         this.solutionsList = document.getElementById('solutions-list');
         this.resultsDiv = document.getElementById('results');
-        this.navigationDiv = document.getElementById('navigation');
         this.difficultyLevel = document.getElementById('difficulty-level');
         this.difficultyBadge = document.getElementById('difficulty-badge');
         this.correctDisplay = document.getElementById('correct');
@@ -66,6 +81,9 @@ export const UI = {
         
         // Set up modal event listeners
         this.setupModalListeners();
+        
+        // Add event listener for back button
+        this.backButton.addEventListener('click', () => QuizLogic.loadPreviousQuestion());
     },
     
     updateStats() {
@@ -110,30 +128,93 @@ export const UI = {
         }, 50);
     },
     
-    renderQuestion(question) {
-        // Update question display
+    updateNavigationButtons(showBack, showNext) {
+        if (this.backButton) {
+            this.backButton.style.display = showBack ? 'inline-block' : 'none';
+        }
+        if (this.nextButton) {
+            this.nextButton.style.display = showNext ? 'inline-block' : 'none';
+            this.nextButton.disabled = !showNext;
+        }
+    },
+    
+    renderQuestion(question, previousAnswer = null) {
+        // Update question text
         this.questionText.textContent = question.question;
-        this.optionsContainer.innerHTML = "";
         
-        // Create option buttons
+        // Clear previous options
+        this.optionsContainer.innerHTML = '';
+        
+        // Check if this question is already answered from state
+        const isAnswered = State.answerSubmitted;
+        
+        // Create and append new option buttons
         question.options.forEach((option, index) => {
-            const optionButton = document.createElement('button');
-            optionButton.className = "option-btn w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-all";
-            optionButton.innerHTML = `
-                <span class="inline-block w-6 h-6 rounded-full mr-3 bg-gray-100 text-gray-700 text-sm flex items-center justify-center">${String.fromCharCode(65 + index)}</span>
-                <span>${option}</span>
-            `;
+            const button = document.createElement('button');
+            button.className = 'option-btn w-full text-left p-4 mb-2 bg-white rounded-lg shadow hover:bg-gray-50 transition-all';
+            button.textContent = option;
             
-            optionButton.addEventListener('click', () => QuizLogic.selectAnswer(index, optionButton));
-            this.optionsContainer.appendChild(optionButton);
+            // If this is a previous question with an answer
+            if (previousAnswer) {
+                // If this option was selected
+                if (index === previousAnswer.selectedAnswer) {
+                    button.classList.add('selected');
+                    
+                    if (previousAnswer.isSubmitted) {
+                        button.classList.add(previousAnswer.isCorrect ? 'correct' : 'incorrect');
+                    }
+                }
+                
+                // If this was the correct answer and the question was submitted
+                if (previousAnswer.isSubmitted && index === question.correctAnswer) {
+                    button.classList.add('correct');
+                }
+                
+                // If the question was submitted, disable all options
+                if (previousAnswer.isSubmitted) {
+                    button.disabled = true;
+                    button.classList.add('cursor-not-allowed');
+                }
+            } else if (isAnswered) {
+                // Handle current question that was already answered
+                if (index === State.selectedAnswerIndex) {
+                    button.classList.add('selected');
+                    button.classList.add(index === question.correctAnswer ? 'correct' : 'incorrect');
+                }
+                if (index === question.correctAnswer) {
+                    button.classList.add('correct');
+                }
+                button.disabled = true;
+                button.classList.add('cursor-not-allowed');
+            }
+            
+            // Add click event listener
+            button.addEventListener('click', () => {
+                // Only allow selection if no answer has been submitted
+                if (!previousAnswer?.isSubmitted && !isAnswered) {
+                    QuizLogic.selectAnswer(index, button);
+                }
+            });
+            
+            this.optionsContainer.appendChild(button);
         });
         
-        // Apply fade in effect
+        // Show the question with fade in effect
         this.questionContainer.style.opacity = '1';
-        this.questionContainer.classList.add('animate-fadeIn');
+        
+        // Handle next button state
+        this.nextButton.disabled = !(previousAnswer?.isSubmitted || isAnswered);
     },
     
     showResults() {
+        // Hide the last question
+        this.questionContainer.style.display = 'none';
+        this.navigationDiv.style.display = 'none';
+        
+        // Show results
+        this.resultsDiv.classList.remove('hidden');
+        this.resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        
         // Calculate final score
         const score = State.totalAttempted > 0 ? Math.round((State.totalCorrect / State.totalAttempted) * 100) : 0;
         
@@ -142,9 +223,6 @@ export const UI = {
         this.finalCorrectDisplay.textContent = State.totalCorrect;
         this.finalIncorrectDisplay.textContent = State.totalIncorrect;
         this.highestDifficultyDisplay.textContent = State.highestDifficulty;
-        
-        // Show results view
-        this.resultsDiv.classList.remove('hidden');
         
         return score;
     },
