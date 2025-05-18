@@ -1,87 +1,89 @@
-// Quiz Questions by difficulty level
+// Sample questions for the quiz
 export const questions = {
-    1: [ // Easy questions
+    // Difficulty level 1 (Easy)
+    1: [
         {
             question: "What is the capital of France?",
             options: ["London", "Berlin", "Paris", "Madrid"],
-            correctAnswer: 2 // Index of correct answer (Paris)
-        },
-        {
-            question: "Which planet is known as the Red Planet?",
-            options: ["Earth", "Mars", "Jupiter", "Venus"],
-            correctAnswer: 1
-        },
-        {
-            question: "What is 2 + 3?",
-            options: ["4", "5", "6", "7"],
-            correctAnswer: 1
-        },
-        {
-            question: "Which element has the chemical symbol 'O'?",
-            options: ["Gold", "Iron", "Oxygen", "Silver"],
             correctAnswer: 2
         },
         {
-            question: "How many sides does a triangle have?",
-            options: ["2", "3", "4", "5"],
+            question: "Which planet is closest to the Sun?",
+            options: ["Earth", "Mars", "Venus", "Mercury"],
+            correctAnswer: 3
+        },
+        {
+            question: "What is 2 + 2?",
+            options: ["3", "4", "5", "6"],
+            correctAnswer: 1
+        },
+        {
+            question: "What is the largest ocean on Earth?",
+            options: ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+            correctAnswer: 3
+        },
+        {
+            question: "Who wrote 'Romeo and Juliet'?",
+            options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
             correctAnswer: 1
         }
     ],
-    2: [ // Medium questions
+    
+    // Difficulty level 2 (Medium)
+    2: [
         {
-            question: "Which scientist proposed the theory of relativity?",
-            options: ["Isaac Newton", "Albert Einstein", "Galileo Galilei", "Stephen Hawking"],
+            question: "Which scientist is known for the theory of relativity?",
+            options: ["Isaac Newton", "Albert Einstein", "Niels Bohr", "Marie Curie"],
             correctAnswer: 1
+        },
+        {
+            question: "What element has the chemical symbol 'K'?",
+            options: ["Krypton", "Potassium", "Calcium", "Copper"],
+            correctAnswer: 1
+        },
+        {
+            question: "In which year did World War II end?",
+            options: ["1943", "1944", "1945", "1946"],
+            correctAnswer: 2
+        },
+        {
+            question: "Which of these is NOT a programming language?",
+            options: ["Python", "Java", "Crocodile", "Ruby"],
+            correctAnswer: 2
         },
         {
             question: "What is the square root of 144?",
             options: ["12", "14", "16", "18"],
             correctAnswer: 0
-        },
-        {
-            question: "Which of these countries is NOT in Europe?",
-            options: ["Poland", "Portugal", "Pakistan", "Norway"],
-            correctAnswer: 2
-        },
-        {
-            question: "What is the largest organ in the human body?",
-            options: ["Heart", "Liver", "Brain", "Skin"],
-            correctAnswer: 3
-        },
-        {
-            question: "Which famous painting was created by Leonardo da Vinci?",
-            options: ["Starry Night", "The Scream", "Mona Lisa", "Guernica"],
-            correctAnswer: 2
         }
     ],
-    3: [ // Hard questions
+    
+    // Difficulty level 3 (Hard)
+    3: [
         {
-            question: "Which of these is NOT a prime number?",
-            options: ["17", "19", "21", "23"],
-            correctAnswer: 2
-        },
-        {
-            question: "What is the chemical symbol for Tungsten?",
-            options: ["Tn", "Tu", "W", "Tg"],
-            correctAnswer: 2
-        },
-        {
-            question: "In which year did World War I begin?",
-            options: ["1912", "1914", "1916", "1918"],
+            question: "In quantum mechanics, what principle states that you cannot simultaneously know both the position and momentum of a particle with perfect precision?",
+            options: ["Pauli Exclusion Principle", "Heisenberg Uncertainty Principle", "Conservation of Energy", "Einstein's Equivalence Principle"],
             correctAnswer: 1
         },
         {
-            question: "Which of these languages is NOT Indo-European?",
-            options: ["Spanish", "Persian", "Hungarian", "Greek"],
+            question: "Which of these sorting algorithms has the best average-case time complexity?",
+            options: ["Bubble Sort - O(n²)", "Quick Sort - O(n log n)", "Selection Sort - O(n²)", "Insertion Sort - O(n²)"],
+            correctAnswer: 1
+        },
+        {
+            question: "What is the approximate value of Avogadro's number?",
+            options: ["3.14 × 10^6", "6.022 × 10^23", "9.8 × 10^9", "1.602 × 10^-19"],
+            correctAnswer: 1
+        },
+        {
+            question: "Which of the following is NOT a fundamental force in physics?",
+            options: ["Gravity", "Electromagnetic force", "Centrifugal force", "Strong nuclear force"],
             correctAnswer: 2
         },
         {
-            question: "What is the value of π (pi) to 4 decimal places?",
-            options: ["3.1415", "3.1416", "3.1425", "3.1426"],
-            correctAnswer: 0
+            question: "In which year was the first artificial satellite, Sputnik 1, launched?",
+            options: ["1955", "1957", "1961", "1969"],
+            correctAnswer: 1
         }
     ]
-};
-
-// Debug log
-console.log('Questions loaded:', questions); 
+}; 
