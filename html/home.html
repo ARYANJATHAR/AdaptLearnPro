@@ -11,8 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/home.css">
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <header class="bg-white shadow-sm py-3 px-4">
+<body class="bg-gray-100 h-screen flex flex-col">
+    <header class="bg-white shadow-sm py-2 px-4">
         <div class="container mx-auto max-w-6xl flex justify-between items-center">
             <h1 class="text-xl font-bold">AdaptLearnPro</h1>
             <a href="https://github.com/ARYANJATHAR/ai_quiz_app" target="_blank" class="flex items-center text-gray-700 hover:text-gray-900">
@@ -22,19 +22,19 @@
         </div>
     </header>
 
-    <main class="container mx-auto max-w-6xl px-4 py-8">
-        <div class="text-center mb-16 mt-12">
-            <h1 class="text-5xl md:text-6xl font-bold mb-6">Intelligent Quizzes<br>That Adapt To You</h1>
+    <main class="container mx-auto max-w-6xl px-4 py-4 flex-grow flex flex-col justify-center">
+        <div class="text-center mb-8">
+            <h1 class="text-5xl md:text-6xl font-bold mb-4">Intelligent Quizzes<br>That Adapt To You</h1>
             
-            <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            <p class="text-xl text-gray-600 mb-6 max-w-2xl mx-auto">
                 Experience dynamic questions that adjust to your skill level.<br>
                 Challenge yourself and learn faster.
             </p>
         </div>
 
-        <div class="max-w-2xl mx-auto">
-            <div class="bg-white rounded-lg shadow-md p-8 mb-8">
-                <div class="mb-6">
+        <div class="max-w-2xl mx-auto w-full">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+                <div class="mb-4">
                     <label for="topic-input" class="block text-lg font-medium text-gray-700 mb-2">Enter Your Quiz Topic</label>
                     <input type="text" 
                         id="topic-input" 
@@ -43,7 +43,7 @@
                     >
                 </div>
                 
-                <div class="mb-6">
+                <div class="mb-4">
                     <label for="question-count" class="block text-lg font-medium text-gray-700 mb-2">Number of Questions</label>
                     <div class="flex items-center justify-center space-x-4">
                         <button class="question-count-btn bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg font-medium transition-colors" data-count="5">5</button>
@@ -61,14 +61,14 @@
                 </div>
             </div>
             
-            <div class="mt-8 text-center">
-                <p class="text-gray-500 mb-2">Or try our sample quiz</p>
+            <div class="text-center">
+                <p class="text-gray-500 mb-1">Or try our sample quiz</p>
                 <a href="./index.html" class="text-indigo-600 hover:text-indigo-800 font-medium">Go to sample quiz <i class="fas fa-arrow-right ml-1"></i></a>
             </div>
         </div>
     </main>
 
-    <footer class="py-4 text-center text-gray-500 text-sm mt-auto">
+    <footer class="py-2 text-center text-gray-500 text-sm">
         <p>© 2025 AdaptLearnPro | Interactive Skill Assessment</p>
     </footer>
 

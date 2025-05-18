@@ -16,6 +16,12 @@ export const QuizLogic = {
         this.loadNextQuestion();
         UI.resultsDiv.classList.add('hidden');
         UI.navigationDiv.classList.remove('hidden');
+        
+        // Remove any existing "View Detailed Results" button when initializing a new quiz
+        const existingButton = document.getElementById('view-detailed-results-container');
+        if (existingButton) {
+            existingButton.remove();
+        }
     },
     
     loadNextQuestion() {
@@ -212,5 +218,82 @@ export const QuizLogic = {
                 ConfettiManager.stopConfetti();
             }, 3000);
         }
+        
+        // Store quiz results data for the detailed results page
+        this.saveQuizResultsData();
+        
+        // Check if View Detailed Results button already exists
+        const resultsDiv = document.getElementById('results');
+        const existingButton = document.getElementById('view-detailed-results-container');
+        
+        // Only add the button if it doesn't already exist
+        if (resultsDiv && !existingButton) {
+            const viewDetailedResultsBtn = document.createElement('div');
+            viewDetailedResultsBtn.id = 'view-detailed-results-container';
+            viewDetailedResultsBtn.className = 'mt-6 text-center';
+            viewDetailedResultsBtn.innerHTML = `
+                <button id="view-detailed-results" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg shadow-md">
+                    <i class="fas fa-chart-bar mr-2"></i>
+                    <span>View Detailed Results</span>
+                </button>
+            `;
+            resultsDiv.appendChild(viewDetailedResultsBtn);
+            
+            // Add event listener
+            document.getElementById('view-detailed-results').addEventListener('click', () => {
+                window.location.href = './results.html';
+            });
+        }
+    },
+    
+    saveQuizResultsData() {
+        // Calculate stats
+        const questionResults = State.questionHistory.map(item => ({
+            question: item.question.question,
+            correct: item.isCorrect,
+            difficulty: item.difficulty
+        }));
+        
+        // Find topics to work on (incorrect answers grouped by topic)
+        const incorrectQuestions = State.questionHistory.filter(item => !item.isCorrect);
+        const topicsToWorkOn = [
+            { 
+                name: "Sample Topic 1", 
+                description: "This is a placeholder. In a real implementation, this would be derived from the question data."
+            },
+            { 
+                name: "Sample Topic 2", 
+                description: "Another placeholder topic derived from question analysis."
+            }
+        ];
+        
+        // Calculate hotstreak
+        let maxStreak = 0;
+        let currentStreak = 0;
+        State.questionHistory.forEach(item => {
+            if (item.isCorrect) {
+                currentStreak++;
+                maxStreak = Math.max(maxStreak, currentStreak);
+            } else {
+                currentStreak = 0;
+            }
+        });
+        
+        // Create results data object
+        const resultsData = {
+            total: State.totalAttempted,
+            correct: State.totalCorrect,
+            incorrect: State.totalIncorrect,
+            score: Math.round((State.totalCorrect / State.totalAttempted) * 100),
+            highestDifficulty: State.highestDifficulty,
+            timeTaken: 780, // Placeholder - would need a timer implementation
+            fastestAnswer: 7, // Placeholder - would need timing data for questions
+            hotstreak: maxStreak,
+            questionResults: questionResults,
+            topicsToWorkOn: topicsToWorkOn
+        };
+        
+        // Store in session storage
+        sessionStorage.setItem('quizResults', JSON.stringify(resultsData));
     }
 }; 
