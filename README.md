@@ -11,4 +11,27 @@ Key features include:
 - Results summary: Get a comprehensive overview of your performance at the end.
 - Solution review: Learn from detailed explanations for each question after finishing the quiz.
 
-This website is designed for anyone who wants to test and improve their knowledge in a fun, dynamic way. 
+This website is designed for anyone who wants to test and improve their knowledge in a fun, dynamic way.
+
+## Deployment on Vercel
+
+This application is configured for easy deployment on Vercel. Follow these steps:
+
+1. Fork or clone this repository to your GitHub account
+2. Sign up or log in to [Vercel](https://vercel.com/)
+3. Click "New Project" and import your GitHub repository
+4. Add the following environment variables:
+   - `GEMINI_API_KEY`: Your Google Gemini API key
+   - `NODE_ENV`: Set to `production` for deployment
+5. Click "Deploy"
+
+### Important Notes for Deployment
+
+- The API key is stored in environment variables and not committed to the repository
+- A `.env.example` file is provided as a template
+- The `vercel.json` file configures the build and routing for proper deployment
+- The server is set up to handle API requests through Vercel serverless functions
+
+## Getting Updates
+
+Star and watch the GitHub repository to get notified about updates! 
