@@ -29,13 +29,24 @@ export const QuizLogic = {
     loadPreviousQuestion() {
         if (State.currentQuestionIndex <= 0) return;
         
+        // Store current question state if it's a new question
+        if (State.currentQuestionIndex === State.questionHistory.length) {
+            State.questionHistory.push({
+                question: State.currentQuestion,
+                selectedAnswer: State.selectedAnswerIndex,
+                isSubmitted: State.answerSubmitted,
+                difficulty: State.currentDifficulty
+            });
+        }
+        
         State.currentQuestionIndex--;
         const previousQuestion = State.questionHistory[State.currentQuestionIndex];
         
         if (previousQuestion) {
             State.currentQuestion = previousQuestion.question;
-            State.answerSubmitted = previousQuestion.userAnswer !== undefined;
-            State.selectedAnswerIndex = previousQuestion.userAnswer;
+            State.answerSubmitted = previousQuestion.isSubmitted;
+            State.selectedAnswerIndex = previousQuestion.selectedAnswer;
+            State.currentDifficulty = previousQuestion.difficulty;
             
             // Apply fade out effect
             UI.questionContainer.style.opacity = '0';
@@ -43,9 +54,9 @@ export const QuizLogic = {
             setTimeout(() => {
                 // Pass the previous answer data to renderQuestion
                 UI.renderQuestion(State.currentQuestion, {
-                    selectedAnswer: previousQuestion.userAnswer,
-                    isSubmitted: previousQuestion.userAnswer !== undefined,
-                    isCorrect: previousQuestion.isCorrect
+                    selectedAnswer: previousQuestion.selectedAnswer,
+                    isSubmitted: previousQuestion.isSubmitted,
+                    isCorrect: previousQuestion.selectedAnswer === previousQuestion.question.correctAnswer
                 });
                 UI.questionContainer.style.opacity = '1';
                 
@@ -62,6 +73,24 @@ export const QuizLogic = {
     },
     
     loadNextQuestion() {
+        // Store current question state if it exists
+        if (State.currentQuestion) {
+            const currentState = {
+                question: State.currentQuestion,
+                selectedAnswer: State.selectedAnswerIndex,
+                isSubmitted: State.answerSubmitted,
+                difficulty: State.currentDifficulty,
+                skipped: !State.answerSubmitted // Track if question was skipped
+            };
+
+            // Update or add to history
+            if (State.currentQuestionIndex < State.questionHistory.length) {
+                State.questionHistory[State.currentQuestionIndex] = currentState;
+            } else {
+                State.questionHistory.push(currentState);
+            }
+        }
+
         State.answerSubmitted = false;
         State.selectedAnswerIndex = null;
         
@@ -72,33 +101,27 @@ export const QuizLogic = {
         UI.questionContainer.style.opacity = '0';
         
         setTimeout(() => {
-            // If we're reviewing previous questions and not at the end
-            if (State.currentQuestionIndex >= 0 && State.currentQuestionIndex < State.questionHistory.length - 1) {
+            // If we're reviewing previous questions
+            if (State.currentQuestionIndex < State.questionHistory.length - 1) {
                 State.currentQuestionIndex++;
                 const nextQuestion = State.questionHistory[State.currentQuestionIndex];
                 State.currentQuestion = nextQuestion.question;
-                
-                // Set the state based on the history
-                State.answerSubmitted = nextQuestion.userAnswer !== undefined;
-                State.selectedAnswerIndex = nextQuestion.userAnswer;
-                
-                // Render with previous answer data
+                State.answerSubmitted = nextQuestion.isSubmitted;
+                State.selectedAnswerIndex = nextQuestion.selectedAnswer;
+                State.currentDifficulty = nextQuestion.difficulty;
+
                 UI.renderQuestion(State.currentQuestion, {
-                    selectedAnswer: nextQuestion.userAnswer,
-                    isSubmitted: nextQuestion.userAnswer !== undefined,
-                    isCorrect: nextQuestion.isCorrect
+                    selectedAnswer: nextQuestion.selectedAnswer,
+                    isSubmitted: nextQuestion.isSubmitted,
+                    isCorrect: nextQuestion.selectedAnswer === nextQuestion.question.correctAnswer,
+                    skipped: nextQuestion.skipped
                 });
                 UI.questionContainer.style.opacity = '1';
-                
-                // Update navigation buttons
-                UI.updateNavigationButtons(
-                    State.currentQuestionIndex > 0,
-                    true
-                );
+                UI.updateNavigationButtons(true, true);
                 return;
             }
-            
-            // Determine which question set to use
+
+            // Get a new question
             const questionSet = this.useCustomQuestions ? this.customQuestions : questions;
             
             // Get available questions at current difficulty
@@ -124,6 +147,26 @@ export const QuizLogic = {
             
             // If still no questions or reached total questions, end the quiz
             if (availableQuestions.length === 0 || State.totalAttempted >= State.totalQuestions) {
+                // Check for skipped questions before ending
+                const skippedQuestions = State.questionHistory.filter(q => q.skipped);
+                if (skippedQuestions.length > 0) {
+                    // Go back to the first skipped question
+                    State.currentQuestionIndex = State.questionHistory.findIndex(q => q.skipped);
+                    const skippedQuestion = State.questionHistory[State.currentQuestionIndex];
+                    State.currentQuestion = skippedQuestion.question;
+                    State.answerSubmitted = false;
+                    State.selectedAnswerIndex = null;
+                    State.currentDifficulty = skippedQuestion.difficulty;
+
+                    UI.renderQuestion(State.currentQuestion);
+                    UI.questionContainer.style.opacity = '1';
+                    UI.updateNavigationButtons(true, true);
+                    
+                    // Show feedback about skipped questions
+                    UI.showFeedback("You have some unanswered questions!", "bg-blue-500");
+                    return;
+                }
+                
                 this.endQuiz();
                 return;
             }
@@ -131,12 +174,10 @@ export const QuizLogic = {
             // Select a random question from available questions
             const randomIndex = Math.floor(Math.random() * availableQuestions.length);
             State.currentQuestion = availableQuestions[randomIndex];
-            
-            // Mark question as answered
             State.answeredQuestions.push(State.currentQuestion.question);
             
-            // Update current question index
-            State.currentQuestionIndex = State.questionHistory.length;
+            // Move to next question index
+            State.currentQuestionIndex++;
             
             // Render the question
             UI.renderQuestion(State.currentQuestion);
@@ -146,19 +187,15 @@ export const QuizLogic = {
             State.totalAttempted++;
             UI.updateStats();
             
-            // Update navigation buttons
-            UI.updateNavigationButtons(
-                State.currentQuestionIndex > 0,
-                true
-            );
-            
-        }, 300); // Delay to match the fade out effect
+            // Show back button after first question
+            UI.updateNavigationButtons(State.currentQuestionIndex > 0, true);
+        }, 300);
     },
     
     selectAnswer(index, button) {
         // If answer was already submitted for this question, don't allow changes
         const currentHistoryQuestion = State.questionHistory[State.currentQuestionIndex];
-        if (currentHistoryQuestion && currentHistoryQuestion.userAnswer !== undefined) return;
+        if (currentHistoryQuestion && currentHistoryQuestion.isSubmitted) return;
         
         // Remove selection from all options
         const allOptions = UI.optionsContainer.querySelectorAll('.option-btn');
@@ -168,9 +205,6 @@ export const QuizLogic = {
         button.classList.add('selected');
         State.selectedAnswerIndex = index;
         
-        // Enable submit button if disabled
-        UI.nextButton.disabled = false;
-        
         // Auto-submit after a short delay
         setTimeout(() => {
             this.submitAnswer();
@@ -178,7 +212,7 @@ export const QuizLogic = {
     },
     
     submitAnswer() {
-        if (State.selectedAnswerIndex === null || State.answerSubmitted) return;
+        if (State.selectedAnswerIndex === null) return;
         
         State.answerSubmitted = true;
         const isCorrect = State.selectedAnswerIndex === State.currentQuestion.correctAnswer;
@@ -187,25 +221,23 @@ export const QuizLogic = {
         const answerTime = Math.round((Date.now() - State.currentQuestionStartTime) / 1000);
         State.fastestAnswerTime = Math.min(State.fastestAnswerTime, answerTime);
         
-        // Track user's answer for review
-        State.userSelections.push({
-            question: State.currentQuestion.question,
-            options: State.currentQuestion.options,
-            correctAnswer: State.currentQuestion.correctAnswer,
-            userAnswer: State.selectedAnswerIndex,
-            isCorrect: isCorrect,
-            answerTime: answerTime
-        });
-        
-        // Store question in history
-        State.questionHistory.push({
+        // Create history item
+        const historyItem = {
             question: State.currentQuestion,
-            userAnswer: State.selectedAnswerIndex,
+            selectedAnswer: State.selectedAnswerIndex,
+            isSubmitted: true,
             isCorrect: isCorrect,
             difficulty: State.currentDifficulty,
             answerTime: answerTime
-        });
-        
+        };
+
+        // Update or add to history
+        if (State.currentQuestionIndex < State.questionHistory.length) {
+            State.questionHistory[State.currentQuestionIndex] = historyItem;
+        } else {
+            State.questionHistory.push(historyItem);
+        }
+
         // First apply styling to options
         const selectedOption = UI.optionsContainer.querySelectorAll('.option-btn')[State.selectedAnswerIndex];
         
@@ -222,23 +254,20 @@ export const QuizLogic = {
             selectedOption.classList.add('correct');
             selectedOption.classList.add('animate-pulse');
             
-            // Show feedback after a tiny delay to ensure visual changes are noticed first
+            // Show feedback and move to next question
             setTimeout(() => {
                 UI.showFeedback("Correct!", "bg-green-500");
                 
-                // Increase difficulty after 3 correct answers in a row
                 if (State.correctStreak >= 3 && State.currentDifficulty < 3) {
                     State.currentDifficulty++;
                     State.highestDifficulty = Math.max(State.highestDifficulty, State.currentDifficulty);
                     State.correctStreak = 0;
                     
-                    // Show level up feedback after a short delay
                     setTimeout(() => {
                         UI.showFeedback("Level Up! Questions will get harder", "bg-blue-500");
                     }, 1200);
                 }
                 
-                // Auto-move to next question after a delay
                 setTimeout(() => {
                     this.loadNextQuestion();
                 }, 1800);
@@ -258,22 +287,19 @@ export const QuizLogic = {
             const correctOption = UI.optionsContainer.querySelectorAll('.option-btn')[State.currentQuestion.correctAnswer];
             correctOption.classList.add('correct');
             
-            // Show feedback after a tiny delay
+            // Show feedback and move to next question
             setTimeout(() => {
                 UI.showFeedback("Incorrect!", "bg-red-500");
                 
-                // Decrease difficulty after 2 incorrect answers in a row
                 if (State.incorrectStreak >= 2 && State.currentDifficulty > 1) {
                     State.currentDifficulty--;
                     State.incorrectStreak = 0;
                     
-                    // Show difficulty adjustment feedback after a short delay
                     setTimeout(() => {
                         UI.showFeedback("Adjusting difficulty for better learning", "bg-blue-500");
                     }, 1200);
                 }
                 
-                // Auto-move to next question after a delay
                 setTimeout(() => {
                     this.loadNextQuestion();
                 }, 1800);
@@ -282,10 +308,6 @@ export const QuizLogic = {
         
         // Update stats display
         UI.updateStats();
-        
-        // Enable next button
-        UI.nextButton.disabled = false;
-        UI.nextButton.focus();
     },
     
     endQuiz() {

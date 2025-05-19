@@ -134,7 +134,7 @@ export const UI = {
         }
         if (this.nextButton) {
             this.nextButton.style.display = showNext ? 'inline-block' : 'none';
-            this.nextButton.disabled = !showNext;
+            // Don't override disabled state here as it's handled in renderQuestion
         }
     },
     
@@ -154,43 +154,32 @@ export const UI = {
             button.className = 'option-btn w-full text-left p-4 mb-2 bg-white rounded-lg shadow hover:bg-gray-50 transition-all';
             button.textContent = option;
             
-            // If this is a previous question with an answer
-            if (previousAnswer) {
+            // Handle previously answered questions
+            if (previousAnswer?.isSubmitted || isAnswered) {
+                const answerData = previousAnswer || {
+                    selectedAnswer: State.selectedAnswerIndex,
+                    isCorrect: State.selectedAnswerIndex === question.correctAnswer
+                };
+                
                 // If this option was selected
-                if (index === previousAnswer.selectedAnswer) {
+                if (index === answerData.selectedAnswer) {
                     button.classList.add('selected');
-                    
-                    if (previousAnswer.isSubmitted) {
-                        button.classList.add(previousAnswer.isCorrect ? 'correct' : 'incorrect');
-                    }
+                    button.classList.add(answerData.isCorrect ? 'correct' : 'incorrect');
                 }
                 
-                // If this was the correct answer and the question was submitted
-                if (previousAnswer.isSubmitted && index === question.correctAnswer) {
-                    button.classList.add('correct');
-                }
-                
-                // If the question was submitted, disable all options
-                if (previousAnswer.isSubmitted) {
-                    button.disabled = true;
-                    button.classList.add('cursor-not-allowed');
-                }
-            } else if (isAnswered) {
-                // Handle current question that was already answered
-                if (index === State.selectedAnswerIndex) {
-                    button.classList.add('selected');
-                    button.classList.add(index === question.correctAnswer ? 'correct' : 'incorrect');
-                }
+                // Show correct answer
                 if (index === question.correctAnswer) {
                     button.classList.add('correct');
                 }
+                
+                // Disable the button
                 button.disabled = true;
                 button.classList.add('cursor-not-allowed');
             }
             
             // Add click event listener
             button.addEventListener('click', () => {
-                // Only allow selection if no answer has been submitted
+                // Only allow selection if question hasn't been answered
                 if (!previousAnswer?.isSubmitted && !isAnswered) {
                     QuizLogic.selectAnswer(index, button);
                 }
@@ -202,8 +191,11 @@ export const UI = {
         // Show the question with fade in effect
         this.questionContainer.style.opacity = '1';
         
-        // Handle next button state
-        this.nextButton.disabled = !(previousAnswer?.isSubmitted || isAnswered);
+        // Always enable next button to allow skipping
+        this.nextButton.disabled = false;
+        
+        // Always show back button after first question
+        this.updateNavigationButtons(State.questionHistory.length > 0, true);
     },
     
     showResults() {
@@ -219,10 +211,60 @@ export const UI = {
         const score = State.totalAttempted > 0 ? Math.round((State.totalCorrect / State.totalAttempted) * 100) : 0;
         
         // Update results
-        this.finalScoreDisplay.textContent = `${score}%`;
+        this.finalScoreDisplay.textContent = `${State.totalCorrect}/${State.totalQuestions}`;
         this.finalCorrectDisplay.textContent = State.totalCorrect;
         this.finalIncorrectDisplay.textContent = State.totalIncorrect;
         this.highestDifficultyDisplay.textContent = State.highestDifficulty;
+
+        // Create answer indicators
+        const answersContainer = document.createElement('div');
+        answersContainer.className = 'flex justify-center gap-2 mt-4 flex-wrap';
+        
+        State.questionHistory.forEach((question, index) => {
+            const indicator = document.createElement('div');
+            indicator.className = `w-8 h-8 rounded-full flex items-center justify-center text-white font-medium ${
+                question.isSubmitted ? 
+                    (question.isCorrect ? 'bg-green-500' : 'bg-red-500') : 
+                    'bg-gray-400'
+            }`;
+            
+            // Show check mark for correct, X for incorrect, dash for skipped
+            indicator.innerHTML = question.isSubmitted ? 
+                (question.isCorrect ? 
+                    '<i class="fas fa-check"></i>' : 
+                    '<i class="fas fa-times"></i>') :
+                '<i class="fas fa-minus"></i>';
+                
+            // Add tooltip
+            indicator.title = `Question ${index + 1}: ${
+                question.isSubmitted ? 
+                    (question.isCorrect ? 'Correct' : 'Incorrect') : 
+                    'Skipped'
+            }`;
+            
+            answersContainer.appendChild(indicator);
+        });
+        
+        // Clear any existing indicators and add new ones
+        const existingIndicators = this.resultsDiv.querySelector('.answers-indicators');
+        if (existingIndicators) {
+            existingIndicators.remove();
+        }
+        answersContainer.classList.add('answers-indicators');
+        this.resultsDiv.insertBefore(answersContainer, this.resultsDiv.querySelector('#view-detailed-results-container'));
+        
+        // Add accuracy text
+        const accuracyText = document.createElement('p');
+        accuracyText.className = 'text-lg text-gray-700 mt-4 text-center';
+        accuracyText.textContent = `Great job! You answered ${State.totalCorrect} out of ${State.totalQuestions} questions correctly — that's ${score}% accuracy!`;
+        
+        // Clear any existing accuracy text and add new one
+        const existingAccuracy = this.resultsDiv.querySelector('.accuracy-text');
+        if (existingAccuracy) {
+            existingAccuracy.remove();
+        }
+        accuracyText.classList.add('accuracy-text');
+        this.resultsDiv.insertBefore(accuracyText, answersContainer);
         
         return score;
     },
