@@ -102,20 +102,22 @@ export const UI = {
         quizContent.className = quizContent.className.replace(/difficulty-level-\d/g, '');
         quizContent.classList.add(`difficulty-level-${State.currentDifficulty}`);
         
-        // Update progress
-        this.progressBar.style.width = `${(State.totalAttempted / State.totalQuestions) * 100}%`;
-        this.progressText.textContent = `Question ${State.totalAttempted} of ${State.totalQuestions}`;
+        // Update progress with correct total question count
+        const progressPercentage = (State.totalAttempted / State.totalQuestions) * 100;
+        this.progressBar.style.width = `${progressPercentage}%`;
         
-        // Display streak information if there is an active streak
-        if (State.correctStreak >= 2) {
-            // Show streak feedback
-            const streakNeeded = 3 - State.correctStreak;
-            const message = streakNeeded > 0 
-                ? `Streak: ${State.correctStreak} (${streakNeeded} more for level up!)` 
-                : `Streak: ${State.correctStreak} (Level up!)`;
-            
-            this.showFeedback(message, "bg-blue-500");
-        }
+        // FIX: The question number display needs to be fixed
+        // Since totalAttempted increments after answering, we need to display the current question number
+        // For question displays, we need to show the question we're currently on (totalAttempted + 1)
+        // unless we've reached the end
+        const currentQuestionNumber = Math.min(State.totalAttempted + 1, State.totalQuestions);
+        
+        this.progressText.textContent = `Question ${currentQuestionNumber} of ${State.totalQuestions}`;
+        
+        // Log the progress update for debugging
+        console.log(`[UI DEBUG] Updated progress: ${currentQuestionNumber}/${State.totalQuestions} (${progressPercentage.toFixed(0)}%)`);
+        
+        // Removed streak progress feedback - no longer showing this to the user
     },
     
     showFeedback(message, bgClass) {
@@ -319,26 +321,26 @@ export const UI = {
         
         // Add longest streak information
         if (State.longestStreak > 0) {
-            // Check if the streak display already exists
-            let streakDisplay = document.getElementById('longest-streak-display');
-            
-            if (!streakDisplay) {
-                // Create a new stats card for the streak
-                const streakCard = document.createElement('div');
-                streakCard.className = 'stats-card bg-white p-4 rounded-lg shadow-md text-center';
-                streakCard.innerHTML = `
-                    <div class="text-4xl font-bold text-yellow-600 mb-2" id="longest-streak">${State.longestStreak}</div>
-                    <p class="text-gray-500">Longest Streak</p>
-                `;
-                
-                // Find the stats container
-                const statsContainer = document.querySelector('#results .flex.flex-wrap.justify-center');
-                if (statsContainer) {
-                    statsContainer.appendChild(streakCard);
+            // Remove any existing streak displays first
+            const existingStreakDisplays = document.querySelectorAll('.stats-card');
+            existingStreakDisplays.forEach(display => {
+                if (display.querySelector('p')?.textContent === 'Longest Streak') {
+                    display.remove();
                 }
-            } else {
-                // Update existing streak display
-                document.getElementById('longest-streak').textContent = State.longestStreak;
+            });
+            
+            // Create a new stats card for the streak
+            const streakCard = document.createElement('div');
+            streakCard.className = 'stats-card bg-white p-4 rounded-lg shadow-md text-center';
+            streakCard.innerHTML = `
+                <div class="text-4xl font-bold text-yellow-600 mb-2" id="longest-streak">${State.longestStreak}</div>
+                <p class="text-gray-500">Longest Streak</p>
+            `;
+            
+            // Find the stats container and append the streak card
+            const statsContainer = document.querySelector('#results .flex.flex-wrap.justify-center');
+            if (statsContainer) {
+                statsContainer.appendChild(streakCard);
             }
         }
         

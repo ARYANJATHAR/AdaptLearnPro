@@ -25,28 +25,38 @@ export const State = {
     totalQuizTime: 0,
     
     reset() {
-        this.currentDifficulty = 1;
-        this.correctStreak = 0;
-        this.incorrectStreak = 0;
-        this.longestStreak = 0;
-        this.answeredQuestions = [];
-        this.currentQuestion = null;
-        this.totalQuestions = 10;
+        // Save the totalQuestions value so we don't lose it on reset
+        const savedTotalQuestions = this.totalQuestions;
+        
+        this.totalAttempted = 0;
         this.totalCorrect = 0;
         this.totalIncorrect = 0;
-        this.totalAttempted = 0;
-        this.highestDifficulty = 1;
-        this.userSelections = [];
-        this.questionHistory = [];
+        
+        this.currentQuestion = null;
         this.currentQuestionIndex = -1;
+        this.questionHistory = [];
+        this.answeredQuestions = [];
+        
         this.selectedAnswerIndex = null;
         this.answerSubmitted = false;
         
-        // Reset timing data
+        this.currentDifficulty = 1;
+        this.highestDifficulty = 1;
+        
+        // IMPORTANT: Explicitly reset streak counters
+        this.correctStreak = 0;
+        this.incorrectStreak = 0;
+        this.longestStreak = 0;
+        
         this.quizStartTime = Date.now();
         this.currentQuestionStartTime = Date.now();
-        this.fastestAnswerTime = Infinity;
         this.totalQuizTime = 0;
+        this.fastestAnswerTime = Infinity;
+        
+        // Restore the original totalQuestions value
+        this.totalQuestions = savedTotalQuestions;
+        
+        console.log(`[STATE DEBUG] State reset complete. All streaks and counters reset to 0. Preserving totalQuestions: ${this.totalQuestions}`);
     },
     
     // Check if a question has been answered

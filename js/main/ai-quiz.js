@@ -29,6 +29,11 @@ export const AIQuizApp = {
         // Update State's total questions
         State.totalQuestions = this.totalQuestions;
         
+        // Make sure streaks are reset properly at initialization
+        State.correctStreak = 0;
+        State.incorrectStreak = 0;
+        console.log('[AI-QUIZ DEBUG] Initialized with reset streaks. correctStreak:', State.correctStreak);
+        
         // Update the UI with the topic and question count
         document.getElementById('quiz-topic').textContent = this.topic;
         document.getElementById('progress-text').textContent = `Question 1 of ${this.totalQuestions}`;
@@ -77,21 +82,15 @@ export const AIQuizApp = {
             const loadingSubtext = document.querySelector('#loading-container p.text-sm');
             const progressBar = document.querySelector('.progress-loading-bar');
             
-            // Calculate how many questions to fetch per difficulty level
-            // Distribute questions fairly across levels with more weight on easier levels
+            // IMPORTANT: Use exactly the number of questions the user selected for EACH difficulty level
+            // This ensures we have enough questions regardless of level changes
             const questionsPerLevel = {
-                1: Math.ceil(this.totalQuestions * 0.5), // 50% easy questions
-                2: Math.ceil(this.totalQuestions * 0.3), // 30% medium questions
-                3: Math.ceil(this.totalQuestions * 0.2)  // 20% hard questions
+                1: this.totalQuestions, // User-selected count for Easy
+                2: this.totalQuestions, // User-selected count for Medium
+                3: this.totalQuestions  // User-selected count for Hard
             };
             
-            // Ensure we have at least 5 questions per level (minimum for meaningful progression)
-            // but don't override user's choice for total questions
-            const minQuestionsPerLevel = Math.max(3, Math.floor(this.totalQuestions / 6));
-            
-            Object.keys(questionsPerLevel).forEach(level => {
-                questionsPerLevel[level] = Math.max(questionsPerLevel[level], minQuestionsPerLevel);
-            });
+            console.log(`[AI-QUIZ DEBUG] Fetching ${this.totalQuestions} questions for EACH difficulty level (${this.totalQuestions * 3} total)`);
             
             // Fetch questions for each difficulty level (1-3)
             for (let difficulty = 1; difficulty <= 3; difficulty++) {
@@ -108,6 +107,8 @@ export const AIQuizApp = {
                 
                 // Store the questions at the appropriate difficulty level
                 this.questions[difficulty] = questionsForLevel;
+                
+                console.log(`[AI-QUIZ DEBUG] Fetched ${questionsForLevel.length} questions for difficulty ${difficulty}`);
                 
                 // Update progress again after fetching
                 progressBar.style.width = `${difficulty * 30}%`;
@@ -237,39 +238,62 @@ export const AIQuizApp = {
             
             // Completely reset all quiz state
             State.reset();
+            
+            // Double-check that streaks are properly reset
+            if (State.correctStreak !== 0 || State.incorrectStreak !== 0) {
+                console.warn("[AI-QUIZ DEBUG] Streaks not properly reset by State.reset(), forcing reset now");
+                State.correctStreak = 0;
+                State.incorrectStreak = 0;
+            }
+            console.log("[AI-QUIZ DEBUG] State reset complete. Streaks:", State.correctStreak, State.incorrectStreak);
+            
             State.totalQuestions = this.totalQuestions;
             
             // Fetch new questions for all difficulty levels
             await this.fetchQuestionsForAllDifficulties();
             
-            // Remove any questions that have been used before to ensure fresh questions
+            // Check if we have enough unused questions for each difficulty level
+            let needMoreQuestions = false;
+            
             for (let difficulty = 1; difficulty <= 3; difficulty++) {
-                this.questions[difficulty] = this.questions[difficulty].filter(
+                const unusedQuestionsCount = this.questions[difficulty].filter(
                     q => !this.usedQuestions.has(q.question)
-                );
+                ).length;
                 
-                // If we filtered out too many, fetch more
-                if (this.questions[difficulty].length < Math.max(3, Math.ceil(this.totalQuestions / 6))) {
-                    loadingText.textContent = `Fetching more level ${difficulty} questions...`;
-                    const additionalCount = Math.max(5, Math.ceil(this.totalQuestions / 5));
+                console.log(`[AI-QUIZ DEBUG] Difficulty ${difficulty}: ${unusedQuestionsCount} unused questions available`);
+                
+                // If we have fewer unused questions than the user selected, fetch more
+                if (unusedQuestionsCount < this.totalQuestions) {
+                    needMoreQuestions = true;
+                    loadingText.textContent = `Fetching more ${getDifficultyName(difficulty)} questions...`;
+                    
+                    // Fetch enough additional questions to reach the user-selected count
+                    const additionalCount = this.totalQuestions;
+                    
+                    console.log(`[AI-QUIZ DEBUG] Fetching ${additionalCount} additional questions for difficulty ${difficulty}`);
+                    
                     const additionalQuestions = await this.fetchAdditionalQuestions(difficulty, additionalCount);
+                    
+                    // Filter out used questions and add new ones
+                    const newQuestions = additionalQuestions.filter(q => !this.usedQuestions.has(q.question));
+                    
+                    console.log(`[AI-QUIZ DEBUG] Added ${newQuestions.length} new questions for difficulty ${difficulty}`);
+                    
                     this.questions[difficulty] = [
                         ...this.questions[difficulty],
-                        ...additionalQuestions.filter(q => !this.usedQuestions.has(q.question))
+                        ...newQuestions
                     ];
                 }
             }
             
-            // Ensure we have enough questions at each level
-            for (let difficulty = 1; difficulty <= 3; difficulty++) {
-                if (this.questions[difficulty].length < 3) {
-                    console.warn(`Not enough fresh questions for difficulty ${difficulty}. Reusing some questions.`);
-                    // If we still don't have enough, we'll have to reuse some
-                    this.usedQuestions.clear(); // Reset used questions tracking
-                }
+            if (needMoreQuestions) {
+                // If we added more questions, show a completion message
+                loadingText.textContent = 'Additional questions ready!';
+                progressBar.style.width = '100%';
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
             
-            console.log("About to initialize quiz with new questions");
+            console.log("[AI-QUIZ DEBUG] About to initialize quiz with new questions");
             
             // Update the quiz with new questions
             QuizLogic.customQuestions = this.questions;
@@ -282,7 +306,7 @@ export const AIQuizApp = {
                 // Show quiz content
                 document.getElementById('loading-container').classList.add('hidden');
                 document.getElementById('quiz-content').classList.remove('hidden');
-                console.log("Initialized quiz with new questions and showing content");
+                console.log("[AI-QUIZ DEBUG] Initialized quiz with new questions and showing content");
             }, 300);
             
         } catch (error) {

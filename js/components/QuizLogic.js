@@ -16,8 +16,14 @@ export const QuizLogic = {
         // Reset all state completely
         State.reset();
         
-        // Explicitly set the total questions to 10 for the default quiz
-        State.totalQuestions = 10;
+        // DO NOT override totalQuestions here for AI quiz - use the value set by AIQuizApp
+        // Only set totalQuestions for the default quiz (non-AI)
+        if (!this.useCustomQuestions) {
+            State.totalQuestions = 10; // Only for default quiz
+            console.log("[QUIZ DEBUG] Using default 10 questions for standard quiz");
+        } else {
+            console.log(`[QUIZ DEBUG] Using user-selected question count: ${State.totalQuestions}`);
+        }
         
         // Reset question tracking
         State.questionHistory = [];
@@ -25,6 +31,12 @@ export const QuizLogic = {
         State.answeredQuestions = [];
         State.totalAttempted = 0;
         State.currentQuestion = null;
+        
+        // IMPORTANT: Explicitly reset streak counters when starting quiz
+        State.correctStreak = 0;
+        State.incorrectStreak = 0;
+        
+        console.log("[QUIZ DEBUG] Quiz initialized. Streaks reset. Current difficulty:", State.currentDifficulty);
         
         // Make sure quiz content is visible in the DOM
         const quizContent = document.getElementById('quiz-content');
@@ -162,7 +174,9 @@ export const QuizLogic = {
                 selectedAnswer: State.selectedAnswerIndex,
                 isSubmitted: State.answerSubmitted,
                 difficulty: State.currentDifficulty,
-                skipped: !State.answerSubmitted // Track if question was skipped
+                skipped: !State.answerSubmitted, // Track if question was skipped
+                correctStreak: State.correctStreak, // Track streak with each question for debugging
+                incorrectStreak: State.incorrectStreak
             };
 
             // Update or add to history
@@ -170,6 +184,25 @@ export const QuizLogic = {
                 State.questionHistory[State.currentQuestionIndex] = currentState;
             } else {
                 State.questionHistory.push(currentState);
+            }
+            
+            // Only increment total attempted when moving to next question
+            State.totalAttempted++;
+            
+            // CRITICAL FIX: Check if we've reached the total questions after incrementing totalAttempted
+            // The critical bug is here - we need to check if we've *completed* all questions
+            // We should only end after the user has answered ALL questions (not one less)
+            if (State.totalAttempted > State.totalQuestions) {
+                console.log(`[QUIZ DEBUG] Reached question limit (${State.totalAttempted}/${State.totalQuestions}). Ending quiz.`);
+                this.endQuiz();
+                return;
+            }
+            
+            // If question was skipped without answering, reset streaks
+            if (!State.answerSubmitted) {
+                console.log("[QUIZ DEBUG] Question skipped. Resetting streaks.");
+                State.correctStreak = 0;
+                State.incorrectStreak = 0;
             }
         }
 
@@ -190,7 +223,20 @@ export const QuizLogic = {
                 State.currentQuestion = nextQuestion.question;
                 State.answerSubmitted = nextQuestion.isSubmitted;
                 State.selectedAnswerIndex = nextQuestion.selectedAnswer;
-                State.currentDifficulty = nextQuestion.difficulty;
+                
+                // Make sure we restore streak state when reviewing old questions
+                // to maintain proper progression logic
+                if (nextQuestion.correctStreak !== undefined) {
+                    State.correctStreak = nextQuestion.correctStreak;
+                    console.log(`[QUIZ DEBUG] Restored correctStreak to ${State.correctStreak} from history`);
+                }
+                if (nextQuestion.incorrectStreak !== undefined) {
+                    State.incorrectStreak = nextQuestion.incorrectStreak;
+                    console.log(`[QUIZ DEBUG] Restored incorrectStreak to ${State.incorrectStreak} from history`);
+                }
+
+                // Don't override difficulty when reviewing questions
+                // State.currentDifficulty = nextQuestion.difficulty;
 
                 UI.renderQuestion(State.currentQuestion, {
                     selectedAnswer: nextQuestion.selectedAnswer,
@@ -204,6 +250,22 @@ export const QuizLogic = {
             }
 
             try {
+                // DOUBLE-CHECK: Verify again we haven't reached the question limit
+                // This should never happen here since we check above, but just in case
+                // We need to fix this check too - we should only end after *completing* totalQuestions
+                if (State.totalAttempted > State.totalQuestions) {
+                    console.log(`[QUIZ DEBUG] Double-check: Reached question limit (${State.totalAttempted}/${State.totalQuestions}). Ending quiz.`);
+                    this.endQuiz();
+                    return;
+                }
+                
+                // If we've answered exactly our total questions and are looking for the next one, end the quiz
+                if (State.totalAttempted === State.totalQuestions) {
+                    console.log(`[QUIZ DEBUG] Completed exact number of questions (${State.totalAttempted}/${State.totalQuestions}). Ending quiz.`);
+                    this.endQuiz();
+                    return;
+                }
+                
                 // Get a new question
                 const questionSet = this.useCustomQuestions ? this.customQuestions : questions;
                 
@@ -236,32 +298,77 @@ export const QuizLogic = {
                     q => !State.answeredQuestions.includes(q.question)
                 );
                 
+                // Log current state for debugging
+                console.log(`[QUIZ DEBUG] Looking for questions at difficulty ${State.currentDifficulty}. Found ${availableQuestions.length} available.`);
+                console.log(`[QUIZ DEBUG] Total attempted: ${State.totalAttempted}/${State.totalQuestions}`);
+                
                 // Check if we need to fetch more questions for current difficulty level
                 if (availableQuestions.length < 3) {
-                    // Instead of moving to a different difficulty, try to generate more questions
-                    // This will be handled by the AIQuizApp's fetchAdditionalQuestions method
-                    // For now, use the remaining questions or proceed with quiz
-                    console.log(`Low on questions for difficulty ${State.currentDifficulty}. Remaining: ${availableQuestions.length}`);
+                    // Log the issue for debugging
+                    console.log(`[QUIZ DEBUG] Low on questions at difficulty ${State.currentDifficulty}. Only ${availableQuestions.length} left.`);
                     
-                    // If we have at least one question, continue with what we have
+                    // CRITICAL FIX: Don't change difficulty if we run out of questions
+                    // Instead, continue with what we have even if it's just 1 question
                     if (availableQuestions.length === 0) {
-                        // If no more questions at current difficulty, check if we've reached total questions
-                        if (State.totalAttempted >= State.totalQuestions) {
-                            this.endQuiz();
-                            return;
+                        // If we haven't reached the total count yet, don't end the quiz - find more questions
+                        console.log(`[QUIZ DEBUG] No questions left at difficulty ${State.currentDifficulty}, but only ${State.totalAttempted}/${State.totalQuestions} attempted. Looking for alternatives...`);
+                        
+                        const currentDiff = State.currentDifficulty;
+                        const availableDifficulties = [];
+                        
+                        // First try the current difficulty again (might have missed some)
+                        if (questionSet[currentDiff] && questionSet[currentDiff].length > 0) {
+                            availableDifficulties.push(currentDiff);
                         }
                         
-                        // Try to use questions from other difficulties as a last resort
-                        const allDifficulties = Object.keys(questionSet).map(Number);
-                        for (const diff of allDifficulties) {
-                            if (diff !== State.currentDifficulty && questionSet[diff]) {
-                                availableQuestions = questionSet[diff].filter(
-                                    q => !State.answeredQuestions.includes(q.question)
-                                );
-                                if (availableQuestions.length > 0) {
-                                    console.log(`Using questions from difficulty ${diff} since no more available at level ${State.currentDifficulty}`);
-                                    State.currentDifficulty = diff;
-                                    break;
+                        // Then try lower difficulties (never higher)
+                        for (let diff = currentDiff - 1; diff >= 1; diff--) {
+                            if (questionSet[diff] && questionSet[diff].length > 0) {
+                                availableDifficulties.push(diff);
+                            }
+                        }
+                        
+                        // If lower difficulties don't have questions, try higher ones as a last resort
+                        if (availableDifficulties.length === 0) {
+                            for (let diff = currentDiff + 1; diff <= 3; diff++) {
+                                if (questionSet[diff] && questionSet[diff].length > 0) {
+                                    availableDifficulties.push(diff);
+                                }
+                            }
+                        }
+                        
+                        let foundQuestionsAtAnyLevel = false;
+                        
+                        for (const diff of availableDifficulties) {
+                            availableQuestions = questionSet[diff].filter(
+                                q => !State.answeredQuestions.includes(q.question)
+                            );
+                            
+                            if (availableQuestions.length > 0) {
+                                foundQuestionsAtAnyLevel = true;
+                                if (diff !== currentDiff) {
+                                    console.log(`[QUIZ DEBUG] Using questions from difficulty ${diff} to continue quiz`);
+                                }
+                                break;
+                            }
+                        }
+                        
+                        // Even after checking all difficulty levels, still no questions available
+                        if (!foundQuestionsAtAnyLevel) {
+                            // As absolute last resort, reuse answered questions
+                            console.log(`[QUIZ DEBUG] No unused questions at any difficulty level. Allowing question reuse.`);
+                            
+                            // Try the current difficulty first
+                            if (questionSet[currentDiff] && questionSet[currentDiff].length > 0) {
+                                availableQuestions = questionSet[currentDiff];
+                            }
+                            // If still nothing, just use any difficulty level that has questions
+                            else {
+                                for (let diff = 1; diff <= 3; diff++) {
+                                    if (questionSet[diff] && questionSet[diff].length > 0) {
+                                        availableQuestions = questionSet[diff];
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -269,7 +376,8 @@ export const QuizLogic = {
                 }
                 
                 // If still no questions or reached total questions, check for skipped before ending
-                if (availableQuestions.length === 0 || State.totalAttempted >= State.totalQuestions) {
+                if (availableQuestions.length === 0) {
+                    console.log(`[QUIZ DEBUG] Still no questions available after all checks. This is unusual.`);
                     // Check for skipped questions before ending
                     const skippedQuestions = State.questionHistory.filter(q => q.skipped);
                     if (skippedQuestions.length > 0) {
@@ -290,6 +398,8 @@ export const QuizLogic = {
                         return;
                     }
                     
+                    console.error(`[QUIZ DEBUG] Unable to find any questions, but only attempted ${State.totalAttempted}/${State.totalQuestions}. Quiz may be in an inconsistent state.`);
+                    // If we can't find any questions, end the quiz
                     this.endQuiz();
                     return;
                 }
@@ -302,6 +412,9 @@ export const QuizLogic = {
                 
                 // Select the first question after randomization
                 State.currentQuestion = availableQuestions[0];
+                
+                // Log question selection for debugging
+                console.log(`[QUIZ DEBUG] Selected question from difficulty ${State.currentDifficulty}. Q${State.totalAttempted+1}/${State.totalQuestions}`);
                 
                 // Sanity check the question object
                 if (!State.currentQuestion || typeof State.currentQuestion !== 'object') {
@@ -327,7 +440,6 @@ export const QuizLogic = {
                 UI.questionContainer.style.opacity = '1';
                 
                 // Update progress
-                State.totalAttempted++;
                 UI.updateStats();
                 
                 // Show back button after first question
@@ -380,7 +492,7 @@ export const QuizLogic = {
         const answerTime = Math.round((Date.now() - State.currentQuestionStartTime) / 1000);
         State.fastestAnswerTime = Math.min(State.fastestAnswerTime, answerTime);
         
-        // Create history item
+        // Create history item with current difficulty level
         const historyItem = {
             question: State.currentQuestion,
             selectedAnswer: State.selectedAnswerIndex,
@@ -400,11 +512,13 @@ export const QuizLogic = {
         // First apply styling to options
         const selectedOption = UI.optionsContainer.querySelectorAll('.option-btn')[State.selectedAnswerIndex];
         
-        // Update streaks and difficulty
         if (isCorrect) {
             State.totalCorrect++;
             State.correctStreak++;
-            State.incorrectStreak = 0;
+            State.incorrectStreak = 0; // Reset incorrect streak on correct answer
+            
+            // Debug logging
+            console.log(`[QUIZ DEBUG] Correct Answer! Current streak: ${State.correctStreak}, Difficulty: ${State.currentDifficulty}`);
             
             // Track the longest correct streak
             State.longestStreak = Math.max(State.longestStreak, State.correctStreak);
@@ -420,15 +534,37 @@ export const QuizLogic = {
             setTimeout(() => {
                 UI.showFeedback("Correct!", "bg-green-500");
                 
-                // Level up after 3 correct answers
-                if (State.correctStreak >= 3 && State.currentDifficulty < 3) {
-                    State.currentDifficulty++;
-                    State.highestDifficulty = Math.max(State.highestDifficulty, State.currentDifficulty);
-                    State.correctStreak = 0;
+                // Check for difficulty increase - must be EXACTLY 3 correct in a row
+                // Only increase difficulty if we're not reviewing previous questions
+                if (State.correctStreak === 3 && 
+                    State.currentQuestionIndex === State.questionHistory.length - 1) {
+                    console.log(`[QUIZ DEBUG] Got exactly 3 in a row! Current difficulty: ${State.currentDifficulty}`);
                     
-                    setTimeout(() => {
-                        UI.showFeedback("Level Up! Questions will get harder", "bg-blue-500");
-                    }, 1200);
+                    if (State.currentDifficulty === 1) {
+                        State.currentDifficulty = 2; // Easy to Medium
+                        // Reset streak when changing difficulty
+                        State.correctStreak = 0;
+                        State.incorrectStreak = 0;
+                        State.highestDifficulty = Math.max(State.highestDifficulty, 2);
+                        
+                        console.log(`[QUIZ DEBUG] Level up! Moving to Medium (2). Streak reset to ${State.correctStreak}`);
+                        
+                        setTimeout(() => {
+                            UI.showFeedback("Level Up! Moving to Medium difficulty", "bg-blue-500");
+                        }, 1200);
+                    } else if (State.currentDifficulty === 2) {
+                        State.currentDifficulty = 3; // Medium to Hard
+                        // Reset streak when changing difficulty
+                        State.correctStreak = 0;
+                        State.incorrectStreak = 0;
+                        State.highestDifficulty = Math.max(State.highestDifficulty, 3);
+                        
+                        console.log(`[QUIZ DEBUG] Level up! Moving to Hard (3). Streak reset to ${State.correctStreak}`);
+                        
+                        setTimeout(() => {
+                            UI.showFeedback("Level Up! Moving to Hard difficulty", "bg-blue-500");
+                        }, 1200);
+                    }
                 }
                 
                 setTimeout(() => {
@@ -438,7 +574,12 @@ export const QuizLogic = {
         } else {
             State.totalIncorrect++;
             State.incorrectStreak++;
+            
+            // IMPORTANT: Reset correct streak on ANY wrong answer
+            const oldStreak = State.correctStreak;
             State.correctStreak = 0;
+            
+            console.log(`[QUIZ DEBUG] Wrong Answer! Correct streak reset from ${oldStreak} to ${State.correctStreak}, Incorrect streak: ${State.incorrectStreak}`);
             
             // Play incorrect sound
             AudioManager.playIncorrect();
@@ -454,15 +595,31 @@ export const QuizLogic = {
             setTimeout(() => {
                 UI.showFeedback("Incorrect!", "bg-red-500");
                 
-                // Instead of going down a level, just stay at current level
-                // Level only decreases after multiple incorrect answers in a row
-                if (State.incorrectStreak >= 3 && State.currentDifficulty > 1) {
-                    State.currentDifficulty--;
-                    State.incorrectStreak = 0;
-                    
-                    setTimeout(() => {
-                        UI.showFeedback("Adjusting difficulty to help your learning", "bg-blue-500");
-                    }, 1200);
+                // For Medium difficulty, go back to Easy after 3 wrong answers in a row
+                if (State.incorrectStreak === 3) {
+                    if (State.currentDifficulty === 2) {
+                        State.currentDifficulty = 1; // Medium to Easy
+                        State.correctStreak = 0;
+                        State.incorrectStreak = 0; // Reset incorrect streak after level change
+                        
+                        console.log(`[QUIZ DEBUG] 3 wrong in a row! Moving back to Easy (1)`);
+                        
+                        setTimeout(() => {
+                            UI.showFeedback("Moving back to Easy difficulty", "bg-blue-500");
+                        }, 1200);
+                    }
+                    // For Hard difficulty, go back to Medium after 3 wrong answers in a row
+                    else if (State.currentDifficulty === 3) {
+                        State.currentDifficulty = 2; // Hard to Medium
+                        State.correctStreak = 0;
+                        State.incorrectStreak = 0; // Reset incorrect streak after level change
+                        
+                        console.log(`[QUIZ DEBUG] 3 wrong in a row! Moving back to Medium (2)`);
+                        
+                        setTimeout(() => {
+                            UI.showFeedback("Moving back to Medium difficulty", "bg-blue-500");
+                        }, 1200);
+                    }
                 }
                 
                 setTimeout(() => {
