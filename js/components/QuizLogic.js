@@ -524,14 +524,25 @@ export const QuizLogic = {
     },
     
     saveQuizResultsData() {
-        // Calculate stats
-        const questionResults = State.questionHistory.map(item => ({
-            question: item.question.question,
-            correct: item.isCorrect,
-            difficulty: item.difficulty,
-            answerTime: item.answerTime
-        }));
+        // Calculate stats and add debug logging
+        console.log('Saving quiz results. Question history:', State.questionHistory);
         
+        const questionResults = State.questionHistory.map(item => {
+            // Debug log for each history item
+            console.log('Processing history item:', item);
+            
+            // Check if the answer was correct
+            const wasCorrect = item.selectedAnswer === item.question.correctAnswer;
+            console.log(`Question "${item.question.question}" - Selected: ${item.selectedAnswer}, Correct: ${item.question.correctAnswer}, Was Correct: ${wasCorrect}`);
+            
+            return {
+                question: item.question.question,
+                correct: wasCorrect,  // Calculate correctness here instead of using isCorrect
+                difficulty: item.difficulty,
+                answerTime: item.answerTime
+            };
+        });
+
         // Store quiz type
         const isAIQuiz = this.useCustomQuestions;
         

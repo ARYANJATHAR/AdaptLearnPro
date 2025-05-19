@@ -130,7 +130,7 @@ function updateResultsUI(data) {
     }
     
     // Update indicators
-    const indicatorContainer = document.querySelector('.flex.flex-wrap.justify-center.gap-2.mb-3');
+    const indicatorContainer = document.getElementById('question-indicators');
     if (indicatorContainer && data.questionResults) {
         updateQuestionIndicators(data.questionResults, indicatorContainer);
     }
@@ -183,16 +183,24 @@ function updateResultsUI(data) {
 function updateQuestionIndicators(results, container) {
     if (!container) return;
     
+    // Debug: Log the results array to check values
+    console.log('Question Results for Indicators:', results);
+    
     // Clear existing indicators
     container.innerHTML = '';
     
     // Create new indicators
-    results.forEach(result => {
+    results.forEach((result, index) => {
         const indicator = document.createElement('div');
-        indicator.className = `w-7 h-7 ${result.correct ? 'bg-green-600' : 'bg-red-600'} rounded-md flex items-center justify-center text-white`;
+        const isCorrect = result.correct === true; // Ensure boolean comparison
+        
+        // Debug: Log each result's correct status
+        console.log(`Question ${index + 1} correct:`, isCorrect, result);
+        
+        indicator.className = `w-7 h-7 ${isCorrect ? 'bg-green-600' : 'bg-red-600'} rounded-md flex items-center justify-center text-white`;
         
         const icon = document.createElement('i');
-        icon.className = `fas ${result.correct ? 'fa-check' : 'fa-times'}`;
+        icon.className = `fas ${isCorrect ? 'fa-check' : 'fa-times'}`;
         
         indicator.appendChild(icon);
         container.appendChild(indicator);
