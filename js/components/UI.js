@@ -211,60 +211,10 @@ export const UI = {
         const score = State.totalAttempted > 0 ? Math.round((State.totalCorrect / State.totalAttempted) * 100) : 0;
         
         // Update results
-        this.finalScoreDisplay.textContent = `${State.totalCorrect}/${State.totalQuestions}`;
+        this.finalScoreDisplay.textContent = `${score}%`;
         this.finalCorrectDisplay.textContent = State.totalCorrect;
         this.finalIncorrectDisplay.textContent = State.totalIncorrect;
         this.highestDifficultyDisplay.textContent = State.highestDifficulty;
-
-        // Create answer indicators
-        const answersContainer = document.createElement('div');
-        answersContainer.className = 'flex justify-center gap-2 mt-4 flex-wrap';
-        
-        State.questionHistory.forEach((question, index) => {
-            const indicator = document.createElement('div');
-            indicator.className = `w-8 h-8 rounded-full flex items-center justify-center text-white font-medium ${
-                question.isSubmitted ? 
-                    (question.isCorrect ? 'bg-green-500' : 'bg-red-500') : 
-                    'bg-gray-400'
-            }`;
-            
-            // Show check mark for correct, X for incorrect, dash for skipped
-            indicator.innerHTML = question.isSubmitted ? 
-                (question.isCorrect ? 
-                    '<i class="fas fa-check"></i>' : 
-                    '<i class="fas fa-times"></i>') :
-                '<i class="fas fa-minus"></i>';
-                
-            // Add tooltip
-            indicator.title = `Question ${index + 1}: ${
-                question.isSubmitted ? 
-                    (question.isCorrect ? 'Correct' : 'Incorrect') : 
-                    'Skipped'
-            }`;
-            
-            answersContainer.appendChild(indicator);
-        });
-        
-        // Clear any existing indicators and add new ones
-        const existingIndicators = this.resultsDiv.querySelector('.answers-indicators');
-        if (existingIndicators) {
-            existingIndicators.remove();
-        }
-        answersContainer.classList.add('answers-indicators');
-        this.resultsDiv.insertBefore(answersContainer, this.resultsDiv.querySelector('#view-detailed-results-container'));
-        
-        // Add accuracy text
-        const accuracyText = document.createElement('p');
-        accuracyText.className = 'text-lg text-gray-700 mt-4 text-center';
-        accuracyText.textContent = `Great job! You answered ${State.totalCorrect} out of ${State.totalQuestions} questions correctly — that's ${score}% accuracy!`;
-        
-        // Clear any existing accuracy text and add new one
-        const existingAccuracy = this.resultsDiv.querySelector('.accuracy-text');
-        if (existingAccuracy) {
-            existingAccuracy.remove();
-        }
-        accuracyText.classList.add('accuracy-text');
-        this.resultsDiv.insertBefore(accuracyText, answersContainer);
         
         return score;
     },
