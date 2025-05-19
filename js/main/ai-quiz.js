@@ -6,7 +6,7 @@ import { ConfettiManager } from '../components/ConfettiManager.js';
 import { State } from '../components/State.js';
 
 // AI Quiz App Module
-const AIQuizApp = {
+export const AIQuizApp = {
     questions: [],
     topic: '',
     usedQuestions: new Set(), // Track all used questions to avoid repetition
@@ -18,6 +18,13 @@ const AIQuizApp = {
         
         // Get the question count from localStorage
         this.totalQuestions = parseInt(localStorage.getItem('questionCount')) || 10;
+        
+        // Set a reasonable minimum for the quiz to function properly, but respect user choice
+        // Only enforce a minimum if the user hasn't explicitly chosen a value
+        if (!localStorage.getItem('questionCount')) {
+            // Default to at least 10 questions if no specific count was chosen
+            this.totalQuestions = Math.max(this.totalQuestions, 10);
+        }
         
         // Update State's total questions
         State.totalQuestions = this.totalQuestions;
@@ -71,12 +78,20 @@ const AIQuizApp = {
             const progressBar = document.querySelector('.progress-loading-bar');
             
             // Calculate how many questions to fetch per difficulty level
-            // Allocate more questions to level 1 (easy) since users start there
+            // Distribute questions fairly across levels with more weight on easier levels
             const questionsPerLevel = {
-                1: Math.ceil(this.totalQuestions * 0.4), // 40% easy questions
+                1: Math.ceil(this.totalQuestions * 0.5), // 50% easy questions
                 2: Math.ceil(this.totalQuestions * 0.3), // 30% medium questions
-                3: Math.ceil(this.totalQuestions * 0.3)  // 30% hard questions
+                3: Math.ceil(this.totalQuestions * 0.2)  // 20% hard questions
             };
+            
+            // Ensure we have at least 5 questions per level (minimum for meaningful progression)
+            // but don't override user's choice for total questions
+            const minQuestionsPerLevel = Math.max(3, Math.floor(this.totalQuestions / 6));
+            
+            Object.keys(questionsPerLevel).forEach(level => {
+                questionsPerLevel[level] = Math.max(questionsPerLevel[level], minQuestionsPerLevel);
+            });
             
             // Fetch questions for each difficulty level (1-3)
             for (let difficulty = 1; difficulty <= 3; difficulty++) {
@@ -164,6 +179,8 @@ const AIQuizApp = {
     // Generate new questions when restarting the quiz
     async restartWithNewQuestions() {
         try {
+            console.log("Beginning restart with new questions");
+            
             // Track questions that were used
             this.trackUsedQuestions();
             
@@ -180,6 +197,11 @@ const AIQuizApp = {
             loadingSubtext.textContent = 'Creating a fresh quiz for you';
             progressBar.style.width = '10%';
             
+            // Make sure we're using the original question count set by the user
+            const userQuestionCount = parseInt(localStorage.getItem('questionCount')) || 10;
+            this.totalQuestions = userQuestionCount;
+            State.totalQuestions = this.totalQuestions;
+            
             // Reset progress display 
             document.getElementById('progress-text').textContent = `Question 1 of ${this.totalQuestions}`;
             document.getElementById('progress-bar').style.width = '10%';
@@ -188,19 +210,49 @@ const AIQuizApp = {
             document.getElementById('correct').textContent = '0';
             document.getElementById('incorrect').textContent = '0';
             document.getElementById('attempted').textContent = '0';
+            document.getElementById('difficulty-level').textContent = '1';
+            const difficultyBadge = document.getElementById('difficulty-badge');
+            if (difficultyBadge) {
+                difficultyBadge.className = 'difficulty-badge difficulty-1 text-white text-xs px-2 py-1 rounded';
+                difficultyBadge.textContent = 'Easy';
+            }
+            
+            // Make sure the question container is properly reset and visible
+            const questionContainer = document.querySelector('#question-container');
+            if (questionContainer) {
+                questionContainer.style.display = 'block';
+                questionContainer.classList.remove('hidden');
+                questionContainer.style.opacity = '1';
+                questionContainer.style.height = 'auto';
+                questionContainer.style.overflow = 'visible';
+                questionContainer.style.margin = '';
+                questionContainer.style.padding = '1.5rem';
+            }
+            
+            // Make sure options container is empty to start fresh
+            const optionsContainer = document.querySelector('#options-container');
+            if (optionsContainer) {
+                optionsContainer.innerHTML = '';
+            }
+            
+            // Completely reset all quiz state
+            State.reset();
+            State.totalQuestions = this.totalQuestions;
             
             // Fetch new questions for all difficulty levels
             await this.fetchQuestionsForAllDifficulties();
             
-            // Remove any questions that have been used before
+            // Remove any questions that have been used before to ensure fresh questions
             for (let difficulty = 1; difficulty <= 3; difficulty++) {
                 this.questions[difficulty] = this.questions[difficulty].filter(
                     q => !this.usedQuestions.has(q.question)
                 );
                 
                 // If we filtered out too many, fetch more
-                if (this.questions[difficulty].length < 3) {
-                    const additionalQuestions = await this.fetchAdditionalQuestions(difficulty);
+                if (this.questions[difficulty].length < Math.max(3, Math.ceil(this.totalQuestions / 6))) {
+                    loadingText.textContent = `Fetching more level ${difficulty} questions...`;
+                    const additionalCount = Math.max(5, Math.ceil(this.totalQuestions / 5));
+                    const additionalQuestions = await this.fetchAdditionalQuestions(difficulty, additionalCount);
                     this.questions[difficulty] = [
                         ...this.questions[difficulty],
                         ...additionalQuestions.filter(q => !this.usedQuestions.has(q.question))
@@ -217,18 +269,29 @@ const AIQuizApp = {
                 }
             }
             
+            console.log("About to initialize quiz with new questions");
+            
             // Update the quiz with new questions
             QuizLogic.customQuestions = this.questions;
             QuizLogic.useCustomQuestions = true;
-            QuizLogic.initQuiz();
             
-            // Show quiz content
-            document.getElementById('loading-container').classList.add('hidden');
-            document.getElementById('quiz-content').classList.remove('hidden');
+            // Init the quiz with a slight delay to ensure all DOM updates are processed
+            setTimeout(() => {
+                QuizLogic.initQuiz();
+                
+                // Show quiz content
+                document.getElementById('loading-container').classList.add('hidden');
+                document.getElementById('quiz-content').classList.remove('hidden');
+                console.log("Initialized quiz with new questions and showing content");
+            }, 300);
             
         } catch (error) {
             console.error('Error restarting quiz with new questions:', error);
             alert('Failed to generate new questions. Restarting with existing questions.');
+            
+            // Completely reset state since we're in an error condition
+            State.reset();
+            State.totalQuestions = this.totalQuestions;
             
             // Fallback to current questions
             QuizLogic.initQuiz();
@@ -238,10 +301,10 @@ const AIQuizApp = {
     },
     
     // Fetch additional questions if needed
-    async fetchAdditionalQuestions(difficulty) {
+    async fetchAdditionalQuestions(difficulty, count = 10) {
         try {
-            console.log(`Fetching additional questions for difficulty ${difficulty}`);
-            const additionalQuestions = await this.fetchQuestions(difficulty);
+            console.log(`Fetching additional ${count} questions for difficulty ${difficulty}`);
+            const additionalQuestions = await this.fetchQuestions(difficulty, count);
             return additionalQuestions;
         } catch (error) {
             console.error('Error fetching additional questions:', error);
@@ -250,23 +313,28 @@ const AIQuizApp = {
     },
     
     setupEventListeners() {
-        // Quiz navigation
-        UI.nextButton.addEventListener('click', () => QuizLogic.loadNextQuestion());
+        // We only need to set up event listeners that aren't already handled in app.js
         
-        UI.restartButton.addEventListener('click', () => {
-            UI.showRestartModal(() => this.restartWithNewQuestions());
-        });
+        // Quiz navigation - let app.js handle this
+        //UI.nextButton.addEventListener('click', () => QuizLogic.loadNextQuestion());
         
-        UI.restartFinalButton.addEventListener('click', () => this.restartWithNewQuestions());
+        // Restart button - let app.js handle this
+        //UI.restartButton.addEventListener('click', () => {
+        //    UI.showRestartModal(() => this.restartWithNewQuestions());
+        //});
         
-        UI.solutionsButton.addEventListener('click', () => UI.showSolutions());
+        // Try Again button in results is handled by app.js now
+        //UI.restartFinalButton.addEventListener('click', async () => { ... });
         
-        // Sound toggle
-        if (UI.soundToggle) {
-            UI.soundToggle.addEventListener('click', () => 
-                AudioManager.toggleSound(UI.soundToggle, UI.showFeedback.bind(UI))
-            );
-        }
+        // Solutions button
+        //UI.solutionsButton.addEventListener('click', () => UI.showSolutions());
+        
+        // Sound toggle 
+        //if (UI.soundToggle) {
+        //    UI.soundToggle.addEventListener('click', () => 
+        //        AudioManager.toggleSound(UI.soundToggle, UI.showFeedback.bind(UI))
+        //    );
+        //}
         
         // Handle window resize for confetti
         window.addEventListener('resize', () => {

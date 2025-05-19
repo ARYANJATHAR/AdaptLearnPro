@@ -105,6 +105,17 @@ export const UI = {
         // Update progress
         this.progressBar.style.width = `${(State.totalAttempted / State.totalQuestions) * 100}%`;
         this.progressText.textContent = `Question ${State.totalAttempted} of ${State.totalQuestions}`;
+        
+        // Display streak information if there is an active streak
+        if (State.correctStreak >= 2) {
+            // Show streak feedback
+            const streakNeeded = 3 - State.correctStreak;
+            const message = streakNeeded > 0 
+                ? `Streak: ${State.correctStreak} (${streakNeeded} more for level up!)` 
+                : `Streak: ${State.correctStreak} (Level up!)`;
+            
+            this.showFeedback(message, "bg-blue-500");
+        }
     },
     
     showFeedback(message, bgClass) {
@@ -139,14 +150,64 @@ export const UI = {
     },
     
     renderQuestion(question, previousAnswer = null) {
+        console.log('Rendering question:', question);
+        
+        // Validate question object
+        if (!question) {
+            console.error('Invalid question object:', question);
+            this.questionText.textContent = 'Error: No question to display';
+            return;
+        }
+        
+        if (!question.question || !question.options || !Array.isArray(question.options)) {
+            console.error('Invalid question format:', question);
+            this.questionText.textContent = 'Error: Invalid question format';
+            return;
+        }
+        
+        // Make sure the question container is visible
+        this.questionContainer.style.display = 'block';
+        this.questionContainer.classList.remove('hidden');
+        this.questionContainer.style.opacity = '1';
+        this.questionContainer.style.height = 'auto';
+        this.questionContainer.style.overflow = 'visible';
+        this.questionContainer.style.margin = '';
+        this.questionContainer.style.padding = '1.5rem';
+        
         // Update question text
         this.questionText.textContent = question.question;
+        console.log('Set question text to:', question.question);
         
-        // Clear previous options
+        // Clear previous options and verify that the container exists
+        if (!this.optionsContainer) {
+            console.error('Options container not found');
+            this.optionsContainer = document.getElementById('options-container');
+            
+            if (!this.optionsContainer) {
+                console.error('Could not find options container');
+                return;
+            }
+        }
+        
         this.optionsContainer.innerHTML = '';
         
         // Check if this question is already answered from state
         const isAnswered = State.answerSubmitted;
+        
+        // Check for valid options
+        if (question.options.length === 0) {
+            console.error('Question has no options:', question);
+            this.optionsContainer.innerHTML = '<div class="p-4 bg-yellow-100 rounded-lg text-yellow-700">This question has no answer options.</div>';
+            return;
+        }
+        
+        // Check for valid correctAnswer
+        if (question.correctAnswer === undefined || question.correctAnswer === null || 
+            question.correctAnswer < 0 || question.correctAnswer >= question.options.length) {
+            console.warn('Question has invalid correctAnswer:', question.correctAnswer);
+            // Try to fix the correct answer if possible
+            question.correctAnswer = 0; // Default to first option
+        }
         
         // Create and append new option buttons
         question.options.forEach((option, index) => {
@@ -188,6 +249,8 @@ export const UI = {
             this.optionsContainer.appendChild(button);
         });
         
+        console.log('Added', question.options.length, 'option buttons');
+        
         // Show the question with fade in effect
         this.questionContainer.style.opacity = '1';
         
@@ -196,25 +259,88 @@ export const UI = {
         
         // Always show back button after first question
         this.updateNavigationButtons(State.questionHistory.length > 0, true);
+        
+        // Make sure navigation is visible
+        if (this.navigationDiv) {
+            this.navigationDiv.classList.remove('hidden');
+            this.navigationDiv.style.display = 'flex';
+        }
     },
     
     showResults() {
-        // Hide the last question
-        this.questionContainer.style.display = 'none';
-        this.navigationDiv.style.display = 'none';
+        console.log("Showing quiz results");
         
-        // Show results
-        this.resultsDiv.classList.remove('hidden');
-        this.resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        // Hide the last question properly
+        if (this.questionContainer) {
+            // Add hidden class instead of just changing opacity
+            this.questionContainer.classList.add('hidden');
+            this.questionContainer.style.opacity = '0';
+            this.questionContainer.style.height = '0';
+            this.questionContainer.style.overflow = 'hidden';
+            this.questionContainer.style.margin = '0';
+            this.questionContainer.style.padding = '0';
+        }
+        
+        if (this.navigationDiv) {
+            this.navigationDiv.style.display = 'none';
+        }
+        
+        // Show results immediately without margin
+        if (this.resultsDiv) {
+            this.resultsDiv.classList.remove('hidden');
+            this.resultsDiv.style.marginTop = '0';
+            this.resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        }
         
         // Calculate final score
         const score = State.totalAttempted > 0 ? Math.round((State.totalCorrect / State.totalAttempted) * 100) : 0;
         
-        // Update results
-        this.finalScoreDisplay.textContent = `${score}%`;
-        this.finalCorrectDisplay.textContent = State.totalCorrect;
-        this.finalIncorrectDisplay.textContent = State.totalIncorrect;
-        this.highestDifficultyDisplay.textContent = State.highestDifficulty;
+        // Update final stats displays
+        if (this.finalScoreDisplay) this.finalScoreDisplay.textContent = `${score}%`;
+        if (this.finalCorrectDisplay) this.finalCorrectDisplay.textContent = State.totalCorrect;
+        if (this.finalIncorrectDisplay) this.finalIncorrectDisplay.textContent = State.totalIncorrect;
+        if (this.highestDifficultyDisplay) {
+            this.highestDifficultyDisplay.textContent = State.highestDifficulty;
+            
+            // Add a badge next to the difficulty level
+            const difficultyName = State.highestDifficulty === 1 ? 'Easy' : 
+                                 State.highestDifficulty === 2 ? 'Medium' : 'Hard';
+                                 
+            const difficultyClass = `difficulty-${State.highestDifficulty}`;
+            
+            if (!document.getElementById('highest-difficulty-badge')) {
+                const badge = document.createElement('span');
+                badge.id = 'highest-difficulty-badge';
+                badge.className = `difficulty-badge ${difficultyClass} text-white text-xs px-2 py-1 rounded ml-2`;
+                badge.textContent = difficultyName;
+                this.highestDifficultyDisplay.parentNode.appendChild(badge);
+            }
+        }
+        
+        // Add longest streak information
+        if (State.longestStreak > 0) {
+            // Check if the streak display already exists
+            let streakDisplay = document.getElementById('longest-streak-display');
+            
+            if (!streakDisplay) {
+                // Create a new stats card for the streak
+                const streakCard = document.createElement('div');
+                streakCard.className = 'stats-card bg-white p-4 rounded-lg shadow-md text-center';
+                streakCard.innerHTML = `
+                    <div class="text-4xl font-bold text-yellow-600 mb-2" id="longest-streak">${State.longestStreak}</div>
+                    <p class="text-gray-500">Longest Streak</p>
+                `;
+                
+                // Find the stats container
+                const statsContainer = document.querySelector('#results .flex.flex-wrap.justify-center');
+                if (statsContainer) {
+                    statsContainer.appendChild(streakCard);
+                }
+            } else {
+                // Update existing streak display
+                document.getElementById('longest-streak').textContent = State.longestStreak;
+            }
+        }
         
         return score;
     },

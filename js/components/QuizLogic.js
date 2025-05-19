@@ -11,19 +11,98 @@ export const QuizLogic = {
     useCustomQuestions: false,
     
     initQuiz() {
-        State.reset();
-        State.questionHistory = [];  // Track all questions for back navigation
-        State.currentQuestionIndex = -1;  // Track current question index
-        UI.updateStats();
-        this.loadNextQuestion();
-        UI.resultsDiv.classList.add('hidden');
-        UI.navigationDiv.classList.remove('hidden');
+        console.log("Initializing quiz with useCustomQuestions:", this.useCustomQuestions);
         
-        // Remove any existing "View Detailed Results" button when initializing a new quiz
+        // Reset all state completely
+        State.reset();
+        
+        // Reset question tracking
+        State.questionHistory = [];
+        State.currentQuestionIndex = -1;
+        State.answeredQuestions = [];
+        State.totalAttempted = 0;
+        State.currentQuestion = null;
+        
+        // Make sure quiz content is visible in the DOM
+        const quizContent = document.getElementById('quiz-content');
+        if (quizContent) {
+            quizContent.classList.remove('hidden');
+            // Make sure the quiz container has the correct difficulty class
+            quizContent.className = quizContent.className.replace(/difficulty-level-\d/g, '');
+            quizContent.classList.add(`difficulty-level-${State.currentDifficulty}`);
+        }
+        
+        // Make sure question container is visible
+        if (UI.questionContainer) {
+            UI.questionContainer.style.display = 'block';
+            UI.questionContainer.classList.remove('hidden');
+            UI.questionContainer.style.opacity = '1';
+            UI.questionContainer.style.height = 'auto';
+            UI.questionContainer.style.overflow = 'visible';
+            UI.questionContainer.style.margin = '';
+            UI.questionContainer.style.padding = '1.5rem';
+        }
+        
+        // Make sure question text is set to loading until we have a real question
+        if (UI.questionText) {
+            UI.questionText.textContent = 'Loading question...';
+        }
+        
+        // Make sure options container is empty
+        if (UI.optionsContainer) {
+            UI.optionsContainer.innerHTML = '';
+        }
+        
+        // Handle potential issues with custom questions
+        if (this.useCustomQuestions && (!this.customQuestions || 
+            !this.customQuestions[State.currentDifficulty] || 
+            this.customQuestions[State.currentDifficulty].length === 0)) {
+            console.warn("Custom questions were requested but not available, falling back to default questions");
+            this.useCustomQuestions = false;
+        }
+        
+        // Validate that we have questions to use
+        if (this.useCustomQuestions) {
+            const questionSet = this.customQuestions;
+            let hasQuestions = false;
+            
+            for (let difficulty = 1; difficulty <= 3; difficulty++) {
+                if (questionSet[difficulty] && questionSet[difficulty].length > 0) {
+                    hasQuestions = true;
+                    break;
+                }
+            }
+            
+            if (!hasQuestions) {
+                console.error("No valid questions found in custom questions set");
+                this.useCustomQuestions = false;
+            }
+        }
+        
+        // Ensure results are hidden and navigation is shown
+        const resultsDiv = document.getElementById('results');
+        if (resultsDiv) resultsDiv.classList.add('hidden');
+        
+        if (UI.navigationDiv) {
+            UI.navigationDiv.classList.remove('hidden');
+            UI.navigationDiv.style.display = 'flex';
+        }
+        
+        // Update stats display to show zeros
+        UI.updateStats();
+        
+        // Remove any existing "View Detailed Results" button
         const existingButton = document.getElementById('view-detailed-results-container');
         if (existingButton) {
             existingButton.remove();
         }
+        
+        console.log("Quiz initialization complete, loading first question...");
+        
+        // This loads the first question with a short delay to ensure UI updates first
+        setTimeout(() => {
+            this.loadNextQuestion();
+        }, 200);
     },
     
     loadPreviousQuestion() {
@@ -121,74 +200,151 @@ export const QuizLogic = {
                 return;
             }
 
-            // Get a new question
-            const questionSet = this.useCustomQuestions ? this.customQuestions : questions;
-            
-            // Get available questions at current difficulty
-            let availableQuestions = questionSet[State.currentDifficulty]?.filter(
-                q => !State.answeredQuestions.includes(q.question)
-            ) || [];
-            
-            // If no more questions at current difficulty, try other difficulties
-            if (availableQuestions.length === 0) {
-                const allDifficulties = Object.keys(questionSet).map(Number);
-                for (const diff of allDifficulties) {
-                    if (diff !== State.currentDifficulty && questionSet[diff]) {
-                        availableQuestions = questionSet[diff].filter(
-                            q => !State.answeredQuestions.includes(q.question)
-                        );
-                        if (availableQuestions.length > 0) {
+            try {
+                // Get a new question
+                const questionSet = this.useCustomQuestions ? this.customQuestions : questions;
+                
+                // Ensure we have a valid question set
+                if (!questionSet || !questionSet[State.currentDifficulty] || questionSet[State.currentDifficulty].length === 0) {
+                    console.error("No questions available at difficulty level:", State.currentDifficulty);
+                    
+                    // Try to find questions at any difficulty level
+                    let foundQuestions = false;
+                    for (let diff = 1; diff <= 3; diff++) {
+                        if (questionSet[diff] && questionSet[diff].length > 0) {
+                            console.log(`Found questions at difficulty level ${diff} instead`);
                             State.currentDifficulty = diff;
+                            foundQuestions = true;
                             break;
                         }
                     }
-                }
-            }
-            
-            // If still no questions or reached total questions, end the quiz
-            if (availableQuestions.length === 0 || State.totalAttempted >= State.totalQuestions) {
-                // Check for skipped questions before ending
-                const skippedQuestions = State.questionHistory.filter(q => q.skipped);
-                if (skippedQuestions.length > 0) {
-                    // Go back to the first skipped question
-                    State.currentQuestionIndex = State.questionHistory.findIndex(q => q.skipped);
-                    const skippedQuestion = State.questionHistory[State.currentQuestionIndex];
-                    State.currentQuestion = skippedQuestion.question;
-                    State.answerSubmitted = false;
-                    State.selectedAnswerIndex = null;
-                    State.currentDifficulty = skippedQuestion.difficulty;
-
-                    UI.renderQuestion(State.currentQuestion);
-                    UI.questionContainer.style.opacity = '1';
-                    UI.updateNavigationButtons(true, true);
                     
-                    // Show feedback about skipped questions
-                    UI.showFeedback("You have some unanswered questions!", "bg-blue-500");
+                    // If we still couldn't find questions, fallback to default
+                    if (!foundQuestions) {
+                        console.warn("No custom questions available at any difficulty level, falling back to default questions");
+                        this.useCustomQuestions = false;
+                        this.loadNextQuestion(); // Try again with default questions
+                        return;
+                    }
+                }
+                
+                // Get available questions at current difficulty that haven't been answered yet
+                let availableQuestions = questionSet[State.currentDifficulty].filter(
+                    q => !State.answeredQuestions.includes(q.question)
+                );
+                
+                // Check if we need to fetch more questions for current difficulty level
+                if (availableQuestions.length < 3) {
+                    // Instead of moving to a different difficulty, try to generate more questions
+                    // This will be handled by the AIQuizApp's fetchAdditionalQuestions method
+                    // For now, use the remaining questions or proceed with quiz
+                    console.log(`Low on questions for difficulty ${State.currentDifficulty}. Remaining: ${availableQuestions.length}`);
+                    
+                    // If we have at least one question, continue with what we have
+                    if (availableQuestions.length === 0) {
+                        // If no more questions at current difficulty, check if we've reached total questions
+                        if (State.totalAttempted >= State.totalQuestions) {
+                            this.endQuiz();
+                            return;
+                        }
+                        
+                        // Try to use questions from other difficulties as a last resort
+                        const allDifficulties = Object.keys(questionSet).map(Number);
+                        for (const diff of allDifficulties) {
+                            if (diff !== State.currentDifficulty && questionSet[diff]) {
+                                availableQuestions = questionSet[diff].filter(
+                                    q => !State.answeredQuestions.includes(q.question)
+                                );
+                                if (availableQuestions.length > 0) {
+                                    console.log(`Using questions from difficulty ${diff} since no more available at level ${State.currentDifficulty}`);
+                                    State.currentDifficulty = diff;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // If still no questions or reached total questions, check for skipped before ending
+                if (availableQuestions.length === 0 || State.totalAttempted >= State.totalQuestions) {
+                    // Check for skipped questions before ending
+                    const skippedQuestions = State.questionHistory.filter(q => q.skipped);
+                    if (skippedQuestions.length > 0) {
+                        // Go back to the first skipped question
+                        State.currentQuestionIndex = State.questionHistory.findIndex(q => q.skipped);
+                        const skippedQuestion = State.questionHistory[State.currentQuestionIndex];
+                        State.currentQuestion = skippedQuestion.question;
+                        State.answerSubmitted = false;
+                        State.selectedAnswerIndex = null;
+                        State.currentDifficulty = skippedQuestion.difficulty;
+
+                        UI.renderQuestion(State.currentQuestion);
+                        UI.questionContainer.style.opacity = '1';
+                        UI.updateNavigationButtons(true, true);
+                        
+                        // Show feedback about skipped questions
+                        UI.showFeedback("You have some unanswered questions!", "bg-blue-500");
+                        return;
+                    }
+                    
+                    this.endQuiz();
                     return;
                 }
                 
-                this.endQuiz();
-                return;
+                // Properly randomize question selection - Fisher-Yates shuffle algorithm
+                for (let i = availableQuestions.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [availableQuestions[i], availableQuestions[j]] = [availableQuestions[j], availableQuestions[i]];
+                }
+                
+                // Select the first question after randomization
+                State.currentQuestion = availableQuestions[0];
+                
+                // Sanity check the question object
+                if (!State.currentQuestion || typeof State.currentQuestion !== 'object') {
+                    console.error("Invalid question object:", State.currentQuestion);
+                    throw new Error("Invalid question format");
+                }
+                
+                State.answeredQuestions.push(State.currentQuestion.question);
+                
+                // Validate the question object has all required properties
+                if (!State.currentQuestion.question || !State.currentQuestion.options) {
+                    console.error("Invalid question format:", State.currentQuestion);
+                    throw new Error("Question missing required properties");
+                }
+                
+                // Move to next question index
+                State.currentQuestionIndex++;
+                
+                console.log("Loading question:", State.currentQuestion.question);
+                
+                // Render the question
+                UI.renderQuestion(State.currentQuestion);
+                UI.questionContainer.style.opacity = '1';
+                
+                // Update progress
+                State.totalAttempted++;
+                UI.updateStats();
+                
+                // Show back button after first question
+                UI.updateNavigationButtons(State.currentQuestionIndex > 0, true);
+            } catch (error) {
+                console.error("Error loading next question:", error);
+                
+                // Show error to user
+                UI.questionText.textContent = "Error loading question. Please try again.";
+                UI.optionsContainer.innerHTML = `
+                    <div class="p-4 bg-red-100 rounded-lg text-red-700">
+                        <p>There was a problem loading the next question. Please try clicking Next to continue.</p>
+                    </div>
+                `;
+                UI.questionContainer.style.opacity = '1';
+                
+                // Make sure navigation is enabled
+                UI.nextButton.disabled = false;
+                UI.updateNavigationButtons(State.currentQuestionIndex > 0, true);
             }
-            
-            // Select a random question from available questions
-            const randomIndex = Math.floor(Math.random() * availableQuestions.length);
-            State.currentQuestion = availableQuestions[randomIndex];
-            State.answeredQuestions.push(State.currentQuestion.question);
-            
-            // Move to next question index
-            State.currentQuestionIndex++;
-            
-            // Render the question
-            UI.renderQuestion(State.currentQuestion);
-            UI.questionContainer.style.opacity = '1';
-            
-            // Update progress
-            State.totalAttempted++;
-            UI.updateStats();
-            
-            // Show back button after first question
-            UI.updateNavigationButtons(State.currentQuestionIndex > 0, true);
         }, 300);
     },
     
@@ -247,6 +403,9 @@ export const QuizLogic = {
             State.correctStreak++;
             State.incorrectStreak = 0;
             
+            // Track the longest correct streak
+            State.longestStreak = Math.max(State.longestStreak, State.correctStreak);
+            
             // Play correct sound
             AudioManager.playCorrect();
             
@@ -258,6 +417,7 @@ export const QuizLogic = {
             setTimeout(() => {
                 UI.showFeedback("Correct!", "bg-green-500");
                 
+                // Level up after 3 correct answers
                 if (State.correctStreak >= 3 && State.currentDifficulty < 3) {
                     State.currentDifficulty++;
                     State.highestDifficulty = Math.max(State.highestDifficulty, State.currentDifficulty);
@@ -291,12 +451,14 @@ export const QuizLogic = {
             setTimeout(() => {
                 UI.showFeedback("Incorrect!", "bg-red-500");
                 
-                if (State.incorrectStreak >= 2 && State.currentDifficulty > 1) {
+                // Instead of going down a level, just stay at current level
+                // Level only decreases after multiple incorrect answers in a row
+                if (State.incorrectStreak >= 3 && State.currentDifficulty > 1) {
                     State.currentDifficulty--;
                     State.incorrectStreak = 0;
                     
                     setTimeout(() => {
-                        UI.showFeedback("Adjusting difficulty for better learning", "bg-blue-500");
+                        UI.showFeedback("Adjusting difficulty to help your learning", "bg-blue-500");
                     }, 1200);
                 }
                 
@@ -457,17 +619,8 @@ export const QuizLogic = {
             });
         }
         
-        // Calculate hotstreak
-        let maxStreak = 0;
-        let currentStreak = 0;
-        State.questionHistory.forEach(item => {
-            if (item.isCorrect) {
-                currentStreak++;
-                maxStreak = Math.max(maxStreak, currentStreak);
-            } else {
-                currentStreak = 0;
-            }
-        });
+        // Calculate hotstreak - now track it directly from State
+        const maxStreak = State.longestStreak || 0;
         
         // Create results data object
         const resultsData = {

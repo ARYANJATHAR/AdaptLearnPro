@@ -228,6 +228,20 @@ body {
     animation: pulse 0.5s ease;
 }
 
+/* Fix for the quiz results whitespace gap */
+#results {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+#results.hidden {
+    display: none;
+}
+
+#question-container.hidden + #results {
+    margin-top: 0;
+}
+
 /* Sound Toggle Button */
 .sound-toggle {
     width: 40px;

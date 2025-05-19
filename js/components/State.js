@@ -3,6 +3,7 @@ export const State = {
     currentDifficulty: 1,
     correctStreak: 0,
     incorrectStreak: 0,
+    longestStreak: 0,
     answeredQuestions: [],
     currentQuestion: null,
     totalQuestions: 10,
@@ -27,6 +28,7 @@ export const State = {
         this.currentDifficulty = 1;
         this.correctStreak = 0;
         this.incorrectStreak = 0;
+        this.longestStreak = 0;
         this.answeredQuestions = [];
         this.currentQuestion = null;
         this.totalCorrect = 0;

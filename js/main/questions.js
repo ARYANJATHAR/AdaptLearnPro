@@ -26,6 +26,31 @@ export const questions = {
             question: "Who wrote 'Romeo and Juliet'?",
             options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
             correctAnswer: 1
+        },
+        {
+            question: "What is the primary color of a banana?",
+            options: ["Red", "Green", "Yellow", "Brown"],
+            correctAnswer: 2
+        },
+        {
+            question: "How many days are in a week?",
+            options: ["5", "6", "7", "8"],
+            correctAnswer: 2
+        },
+        {
+            question: "Which animal is known as the 'King of the Jungle'?",
+            options: ["Tiger", "Lion", "Elephant", "Giraffe"],
+            correctAnswer: 1
+        },
+        {
+            question: "What is the first month of the year?",
+            options: ["February", "December", "January", "March"],
+            correctAnswer: 2
+        },
+        {
+            question: "What is the opposite of 'hot'?",
+            options: ["Warm", "Cold", "Cool", "Mild"],
+            correctAnswer: 1
         }
     ],
     
@@ -55,6 +80,31 @@ export const questions = {
             question: "What is the square root of 144?",
             options: ["12", "14", "16", "18"],
             correctAnswer: 0
+        },
+        {
+            question: "Which planet is known as the 'Red Planet'?",
+            options: ["Venus", "Mars", "Jupiter", "Saturn"],
+            correctAnswer: 1
+        },
+        {
+            question: "What is the chemical formula for water?",
+            options: ["CO2", "H2O", "O2", "NaCl"],
+            correctAnswer: 1
+        },
+        {
+            question: "Who painted the Mona Lisa?",
+            options: ["Vincent van Gogh", "Leonardo da Vinci", "Pablo Picasso", "Michelangelo"],
+            correctAnswer: 1
+        },
+        {
+            question: "What is the capital of Japan?",
+            options: ["Seoul", "Beijing", "Tokyo", "Bangkok"],
+            correctAnswer: 2
+        },
+        {
+            question: "Which organ in the human body produces insulin?",
+            options: ["Liver", "Pancreas", "Kidney", "Stomach"],
+            correctAnswer: 1
         }
     ],
     
@@ -83,6 +133,31 @@ export const questions = {
         {
             question: "In which year was the first artificial satellite, Sputnik 1, launched?",
             options: ["1955", "1957", "1961", "1969"],
+            correctAnswer: 1
+        },
+        {
+            question: "What is the half-life of Carbon-14?",
+            options: ["4,730 years", "5,730 years", "6,730 years", "7,730 years"],
+            correctAnswer: 1
+        },
+        {
+            question: "Which mathematical constant is also known as Euler's number?",
+            options: ["π (pi)", "e", "φ (phi)", "i (imaginary unit)"],
+            correctAnswer: 1
+        },
+        {
+            question: "What is the most abundant element in the universe by mass?",
+            options: ["Helium", "Hydrogen", "Carbon", "Oxygen"],
+            correctAnswer: 1
+        },
+        {
+            question: "Which programming paradigm treats computation as the evaluation of mathematical functions?",
+            options: ["Object-Oriented", "Functional", "Procedural", "Imperative"],
+            correctAnswer: 1
+        },
+        {
+            question: "What is the time complexity of binary search on a sorted array?",
+            options: ["O(n)", "O(log n)", "O(n log n)", "O(n²)"],
             correctAnswer: 1
         }
     ]

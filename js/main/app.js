@@ -5,6 +5,9 @@ import { AudioManager } from '../components/AudioManager.js';
 import { ConfettiManager } from '../components/ConfettiManager.js';
 import { State } from '../components/State.js';
 
+// Import the AIQuizApp for AI quiz functionality
+import { AIQuizApp } from './ai-quiz.js';
+
 // Quiz App Main Module
 const QuizApp = {
     async init() {
@@ -17,118 +20,21 @@ const QuizApp = {
         // Initialize AudioManager
         AudioManager.init();
         
-        // Check if this is an AI quiz
+        // Check if this is an AI quiz page
         const isAIQuiz = window.location.pathname.includes('ai-quiz.html');
+        console.log("Is AI Quiz:", isAIQuiz);
         
-        if (isAIQuiz) {
-            // Get the topic from localStorage
-            const topic = localStorage.getItem('quizTopic') || 'General Knowledge';
-            const totalQuestions = parseInt(localStorage.getItem('questionCount')) || 10;
-            
-            // Update State's total questions
-            State.totalQuestions = totalQuestions;
-            
-            // Update the UI with the topic
-            document.getElementById('quiz-topic').textContent = topic;
-            document.getElementById('progress-text').textContent = `Question 1 of ${totalQuestions}`;
-            
-            try {
-                // Show loading indicator
-                document.getElementById('loading-container').classList.remove('hidden');
-                document.getElementById('quiz-content').classList.add('hidden');
-                
-                // Fetch AI-generated questions
-                const questions = await this.fetchQuestionsForAllDifficulties(topic, totalQuestions);
-                
-                // Initialize the quiz with AI-generated questions
-                QuizLogic.customQuestions = questions;
-                QuizLogic.useCustomQuestions = true;
-                
-                // Hide loading, show quiz
-                document.getElementById('loading-container').classList.add('hidden');
-                document.getElementById('quiz-content').classList.remove('hidden');
-            } catch (error) {
-                console.error('Error initializing AI quiz:', error);
-                alert('Failed to generate quiz questions. Please try again.');
-                window.location.href = './home.html';
-                return;
-            }
-        }
-        
-        // Set up event listeners
+        // Set up event listeners for UI interactions
         this.setupEventListeners();
         
-        // Initialize the quiz
-        QuizLogic.initQuiz();
-    },
-    
-    async fetchQuestionsForAllDifficulties(topic, totalQuestions) {
-        try {
-            // Create a questions object with three difficulty levels
-            const questions = {
-                1: [], // Easy
-                2: [], // Medium
-                3: []  // Hard
-            };
-            
-            // Show progressive loading feedback
-            const loadingText = document.querySelector('#loading-container p.text-lg');
-            const loadingSubtext = document.querySelector('#loading-container p.text-sm');
-            const progressBar = document.querySelector('.progress-loading-bar');
-            
-            // Calculate questions per level
-            const questionsPerLevel = {
-                1: Math.ceil(totalQuestions * 0.4), // 40% easy
-                2: Math.ceil(totalQuestions * 0.3), // 30% medium
-                3: Math.ceil(totalQuestions * 0.3)  // 30% hard
-            };
-            
-            // Fetch questions for each difficulty level
-            for (let difficulty = 1; difficulty <= 3; difficulty++) {
-                loadingText.textContent = `Generating ${this.getDifficultyName(difficulty)} questions...`;
-                loadingSubtext.textContent = `Creating level ${difficulty} of 3`;
-                progressBar.style.width = `${(difficulty - 1) * 30 + 10}%`;
-                
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                const response = await fetch('/api/quiz/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        topic,
-                        difficulty,
-                        count: questionsPerLevel[difficulty]
-                    }),
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                if (!data.success || !data.data.questions) {
-                    throw new Error('Failed to get valid questions from the server');
-                }
-                
-                questions[difficulty] = data.data.questions.map(q => ({
-                    question: q.question,
-                    options: q.options || [],
-                    correctAnswer: q.correctAnswer
-                }));
-                
-                progressBar.style.width = `${difficulty * 30}%`;
-            }
-            
-            loadingText.textContent = 'Quiz ready!';
-            loadingSubtext.textContent = 'Loading your quiz...';
-            progressBar.style.width = '100%';
-            
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            return questions;
-        } catch (error) {
-            console.error('Error fetching questions:', error);
-            throw error;
+        if (isAIQuiz) {
+            console.log("Initializing AI Quiz using dedicated module");
+            // Initialize AI Quiz using the dedicated module
+            await AIQuizApp.init();
+        } else {
+            console.log("Initializing standard quiz");
+            // Initialize the quiz with default questions
+            QuizLogic.initQuiz();
         }
     },
     
@@ -142,10 +48,119 @@ const QuizApp = {
         UI.nextButton.addEventListener('click', () => QuizLogic.loadNextQuestion());
         
         UI.restartButton.addEventListener('click', () => {
-            UI.showRestartModal(() => QuizLogic.initQuiz());
+            // Check if this is an AI quiz
+            const isAIQuiz = window.location.pathname.includes('ai-quiz.html');
+            
+            if (isAIQuiz) {
+                // Use the AIQuizApp restart method for AI quizzes
+                UI.showRestartModal(() => AIQuizApp.restartWithNewQuestions());
+            } else {
+                // Use the standard quiz restart for regular quizzes
+                UI.showRestartModal(() => QuizLogic.initQuiz());
+            }
         });
         
-        UI.restartFinalButton.addEventListener('click', () => QuizLogic.initQuiz());
+        UI.restartFinalButton.addEventListener('click', async () => {
+            console.log("Try Again button clicked");
+            
+            // Check if this is an AI quiz
+            const isAIQuiz = window.location.pathname.includes('ai-quiz.html');
+            
+            if (isAIQuiz) {
+                console.log("Restarting AI quiz with new questions");
+                
+                // Fix issue with the question container not being visible
+                const questionContainer = document.querySelector('#question-container');
+                if (questionContainer) {
+                    questionContainer.style.display = 'block';
+                    questionContainer.classList.remove('hidden');
+                    questionContainer.style.opacity = '1';
+                    questionContainer.style.height = 'auto';
+                    questionContainer.style.overflow = 'visible';
+                    questionContainer.style.margin = '';
+                    questionContainer.style.padding = '1.5rem';
+                }
+                
+                // Make sure options container is empty to start fresh
+                const optionsContainer = document.querySelector('#options-container');
+                if (optionsContainer) {
+                    optionsContainer.innerHTML = '';
+                }
+                
+                // First, hide the results view
+                const resultsDiv = document.getElementById('results');
+                if (resultsDiv) {
+                    resultsDiv.classList.add('hidden');
+                }
+                
+                try {
+                    // Use AIQuizApp's dedicated method for restarting with new questions
+                    // This will respect the user's original question count
+                    await AIQuizApp.restartWithNewQuestions();
+                } catch (error) {
+                    console.error('Error restarting AI quiz:', error);
+                    alert('Failed to generate new questions. Please try again.');
+                    
+                    // Ensure quiz content is visible even if there's an error
+                    document.getElementById('loading-container').classList.add('hidden');
+                    document.getElementById('quiz-content').classList.remove('hidden');
+                }
+                
+                return;
+            }
+            
+            // Regular quiz restart logic for non-AI quizzes
+            
+            // Fix issue with the question container not being visible
+            const questionContainer = document.querySelector('#question-container');
+            questionContainer.style.display = 'block';
+            questionContainer.classList.remove('hidden');
+            questionContainer.style.opacity = '1';
+            questionContainer.style.height = 'auto';
+            questionContainer.style.overflow = 'visible';
+            questionContainer.style.margin = '';
+            questionContainer.style.padding = '1.5rem';
+            
+            // Make sure options container is empty to start fresh
+            document.querySelector('#options-container').innerHTML = '';
+            
+            // First, hide the results view
+            document.getElementById('results').classList.add('hidden');
+            
+            // Start loading a fresh question
+            document.getElementById('question-text').textContent = 'Loading question...';
+            
+            // Show the quiz content
+            document.getElementById('quiz-content').classList.remove('hidden');
+            
+            // Use default questions for regular quiz
+            QuizLogic.useCustomQuestions = false;
+            QuizLogic.customQuestions = null;
+            
+            // Completely reset all quiz state
+            State.reset();
+            State.questionHistory = [];
+            State.currentQuestionIndex = -1;
+            State.answeredQuestions = [];
+            State.totalAttempted = 0;
+            State.currentQuestion = null;
+            
+            // Reset progress display
+            document.getElementById('progress-text').textContent = `Question 1 of ${State.totalQuestions}`;
+            document.getElementById('progress-bar').style.width = '10%';
+            
+            // Reset statistics display
+            document.getElementById('correct').textContent = '0';
+            document.getElementById('incorrect').textContent = '0';
+            document.getElementById('attempted').textContent = '0';
+            
+            console.log("Restarting quiz with default questions");
+            
+            // Initialize quiz with fresh state after a short delay
+            setTimeout(() => {
+                QuizLogic.initQuiz();
+            }, 100);
+        });
         
         UI.solutionsButton.addEventListener('click', () => UI.showSolutions());
         
