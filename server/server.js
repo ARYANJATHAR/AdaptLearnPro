@@ -33,7 +33,7 @@ app.get('/api/health', (req, res) => {
 // AI Quiz Generation Route
 app.post('/api/quiz/generate', async (req, res) => {
   try {
-    const { topic, difficulty = 1, count = 5 } = req.body;
+    const { topic, difficulty = 1, count = 10 } = req.body;
     
     if (!topic) {
       return res.status(400).json({ error: 'Topic is required' });

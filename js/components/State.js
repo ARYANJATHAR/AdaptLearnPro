@@ -31,6 +31,7 @@ export const State = {
         this.longestStreak = 0;
         this.answeredQuestions = [];
         this.currentQuestion = null;
+        this.totalQuestions = 10;
         this.totalCorrect = 0;
         this.totalIncorrect = 0;
         this.totalAttempted = 0;

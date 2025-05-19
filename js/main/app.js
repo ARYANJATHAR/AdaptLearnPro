@@ -146,7 +146,7 @@ const QuizApp = {
             State.currentQuestion = null;
             
             // Reset progress display
-            document.getElementById('progress-text').textContent = `Question 1 of ${State.totalQuestions}`;
+            document.getElementById('progress-text').textContent = `Question 1 of 10`;
             document.getElementById('progress-bar').style.width = '10%';
             
             // Reset statistics display

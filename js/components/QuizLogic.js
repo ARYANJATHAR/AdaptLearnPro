@@ -16,6 +16,9 @@ export const QuizLogic = {
         // Reset all state completely
         State.reset();
         
+        // Explicitly set the total questions to 10 for the default quiz
+        State.totalQuestions = 10;
+        
         // Reset question tracking
         State.questionHistory = [];
         State.currentQuestionIndex = -1;
