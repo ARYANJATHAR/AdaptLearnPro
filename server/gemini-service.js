@@ -112,154 +112,53 @@ async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
         - Ensure all questions are unique and cover different aspects of the topic
         - For medium questions, they should be more challenging than easy questions but still approachable`;
 
-        // Generate content
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
         
         console.log("Raw AI response received, proceeding to extract questions");
         
-        // Try multiple approaches to extract JSON
-        let questions;
-        try {
-            // First try: direct JSON parse of the entire response
-            try {
-                questions = JSON.parse(text);
-                console.log("Successfully parsed response as JSON directly");
-            } catch (e) {
-                console.log("Direct JSON parse failed, trying to extract JSON array");
-                // Second try: find JSON array pattern
-                const jsonMatch = text.match(/\[\s*\{[^]*\}\s*\]/);
-                if (jsonMatch) {
-                    questions = JSON.parse(jsonMatch[0]);
-                    console.log("Successfully extracted and parsed JSON array");
-                } else {
-                    console.log("JSON array pattern not found, looking for individual question objects");
-                    // Third try: look for individual question objects
-                    const questionMatches = text.match(/\{[^}]+\}/g);
-                    if (questionMatches) {
-                        questions = questionMatches.map(q => {
-                            try {
-                                return JSON.parse(q);
-                            } catch (parseErr) {
-                                console.warn(`Failed to parse question object: ${q}`);
-                                return null;
-                            }
-                        }).filter(q => q !== null);
-                        
-                        console.log(`Found ${questions.length} individual question objects`);
-                    } else {
-                        console.error("Could not find valid JSON in response");
-                        // Last resort: Try to create questions manually from the text
-                        questions = tryManualExtraction(text);
-                        
-                        if (questions.length === 0) {
-                            throw new Error('No valid JSON found in response');
-                        }
-                    }
-                }
-            }
-            
-            console.log(`Initial extraction yielded ${questions ? questions.length : 0} questions, preprocessing options...`);
-            
-            // Then in your generateQuizQuestions function, add this before validation:
-            if (Array.isArray(questions)) {
-                questions = preprocessQuestionOptions(questions);
-            } else {
-                console.error("Questions is not an array:", typeof questions);
-                questions = [];
-            }
-            
-            // If we failed to extract anything meaningful, provide fallback questions
-            if (!questions || questions.length === 0) {
-                console.warn("Failed to extract questions, using fallback questions");
-                questions = generateFallbackQuestions(topic, difficulty, count);
-            }
-            
-            // Log the processed questions for debugging
-            console.log(`Processing ${questions.length} questions, validating format...`);
-            
-            // Validate the questions format
-            const validQuestions = questions.filter(q => {
-                try {
-                    const isValid = (
-                        q && typeof q === 'object' &&
-                        q.question && 
-                        typeof q.question === 'string' &&
-                        Array.isArray(q.options) && 
-                        q.options.length === 4 &&
-                        q.options.every(opt => typeof opt === 'string') &&
-                        typeof q.correctAnswer === 'number' &&
-                        q.correctAnswer >= 0 && 
-                        q.correctAnswer <= 3
-                    );
-                    
-                    if (!isValid) {
-                        const issues = [];
-                        if (!q || typeof q !== 'object') issues.push("Question is not an object");
-                        else {
-                            if (!q.question) issues.push("Missing question field");
-                            if (typeof q.question !== 'string') issues.push("Question is not a string");
-                            if (!Array.isArray(q.options)) issues.push("Options is not an array");
-                            if (!q.options || q.options.length !== 4) issues.push(`Options length is ${q.options?.length}`);
-                            if (q.options && !q.options.every(opt => typeof opt === 'string')) issues.push("Not all options are strings");
-                            if (typeof q.correctAnswer !== 'number') issues.push("CorrectAnswer is not a number");
-                            if (q.correctAnswer < 0 || q.correctAnswer > 3) issues.push(`CorrectAnswer out of range: ${q.correctAnswer}`);
-                        }
-                        console.warn(`Invalid question format: ${issues.join(', ')}`);
-                    }
-                    
-                    return isValid;
-                } catch (e) {
-                    console.error("Error validating question:", e);
-                    return false;
-                }
-            });
-            
-            console.log(`Validation complete: ${validQuestions.length} valid questions out of ${questions.length}`);
-            
-            if (validQuestions.length === 0) {
-                console.error('No valid questions found in response');
-                // Use fallback questions if no valid questions are found
-                const fallbackQuestions = generateFallbackQuestions(topic, difficulty, count);
-                console.log(`Using ${fallbackQuestions.length} fallback questions`);
-                return fallbackQuestions;
-            }
-            
-            // Check for duplicate questions
-            const questionTexts = new Set();
-            const uniqueQuestions = validQuestions.filter(q => {
-                // Normalize the question text for comparison
-                const normalizedText = q.question.toLowerCase().trim();
-                if (questionTexts.has(normalizedText)) {
-                    return false;
-                }
-                questionTexts.add(normalizedText);
-                return true;
-            });
-            
-            console.log(`Generated ${uniqueQuestions.length} unique questions (filtered from ${validQuestions.length})`);
-            
-            // If we don't have enough questions, but have some valid ones, return what we have
-            if (uniqueQuestions.length < count && uniqueQuestions.length > 0) {
-                console.log(`Warning: Only generated ${uniqueQuestions.length} questions instead of requested ${count}`);
-                return uniqueQuestions;
-            }
-            
-            return uniqueQuestions.slice(0, count);
-            
-        } catch (parseError) {
-            console.error('Error parsing AI response:', parseError);
-            console.error('Raw response:', text);
-            // In case of a parsing error, still try to use fallback questions
-            const fallbackQuestions = generateFallbackQuestions(topic, difficulty, count);
-            console.log(`Using ${fallbackQuestions.length} fallback questions due to parsing error`);
-            return fallbackQuestions;
+        // Extract questions using utility function
+        let questions = extractQuestionsFromResponse(text);
+        
+        if (!questions || questions.length === 0) {
+            console.warn("Failed to extract questions, using fallback questions");
+            return generateFallbackQuestions(topic, difficulty, count);
         }
+        
+        // Preprocess options
+        if (Array.isArray(questions)) {
+            questions = preprocessQuestionOptions(questions);
+        } else {
+            console.error("Questions is not an array:", typeof questions);
+            return generateFallbackQuestions(topic, difficulty, count);
+        }
+        
+        // Validate questions using utility function
+        const validQuestions = questions.filter(validateQuestion);
+        
+        console.log(`Validation complete: ${validQuestions.length} valid questions out of ${questions.length}`);
+        
+        if (validQuestions.length === 0) {
+            console.error('No valid questions found in response');
+            return generateFallbackQuestions(topic, difficulty, count);
+        }
+        
+        // Remove duplicates
+        const questionTexts = new Set();
+        const uniqueQuestions = validQuestions.filter(q => {
+            const normalizedText = q.question.toLowerCase().trim();
+            if (questionTexts.has(normalizedText)) return false;
+            questionTexts.add(normalizedText);
+            return true;
+        });
+        
+        console.log(`Generated ${uniqueQuestions.length} unique questions (filtered from ${validQuestions.length})`);
+        
+        return uniqueQuestions.slice(0, count);
         
     } catch (error) {
         console.error('Error generating quiz questions:', error);
-        // Final fallback in case of any other errors
         return generateFallbackQuestions(topic, difficulty, count);
     }
 }
@@ -417,6 +316,92 @@ function generateFallbackQuestions(topic, difficulty, count) {
     }
     
     return questions;
+}
+
+// Utility function to validate a single question
+function validateQuestion(q) {
+    try {
+        const isValid = (
+            q && typeof q === 'object' &&
+            q.question && 
+            typeof q.question === 'string' &&
+            Array.isArray(q.options) && 
+            q.options.length === 4 &&
+            q.options.every(opt => typeof opt === 'string') &&
+            typeof q.correctAnswer === 'number' &&
+            q.correctAnswer >= 0 && 
+            q.correctAnswer <= 3
+        );
+        
+        if (!isValid) {
+            const issues = [];
+            if (!q || typeof q !== 'object') issues.push("Question is not an object");
+            else {
+                if (!q.question) issues.push("Missing question field");
+                if (typeof q.question !== 'string') issues.push("Question is not a string");
+                if (!Array.isArray(q.options)) issues.push("Options is not an array");
+                if (!q.options || q.options.length !== 4) issues.push(`Options length is ${q.options?.length}`);
+                if (q.options && !q.options.every(opt => typeof opt === 'string')) issues.push("Not all options are strings");
+                if (typeof q.correctAnswer !== 'number') issues.push("CorrectAnswer is not a number");
+                if (q.correctAnswer < 0 || q.correctAnswer > 3) issues.push(`CorrectAnswer out of range: ${q.correctAnswer}`);
+            }
+            console.warn(`Invalid question format: ${issues.join(', ')}`);
+        }
+        
+        return isValid;
+    } catch (e) {
+        console.error("Error validating question:", e);
+        return false;
+    }
+}
+
+// Utility function to extract questions from AI response
+function extractQuestionsFromResponse(text) {
+    let questions;
+    
+    // Try direct JSON parse
+    try {
+        questions = JSON.parse(text);
+        console.log("Successfully parsed response as JSON directly");
+        return questions;
+    } catch (e) {
+        console.log("Direct JSON parse failed, trying alternatives");
+    }
+    
+    // Try finding JSON array pattern
+    const jsonMatch = text.match(/\[\s*\{[^]*\}\s*\]/);
+    if (jsonMatch) {
+        try {
+            questions = JSON.parse(jsonMatch[0]);
+            console.log("Successfully extracted and parsed JSON array");
+            return questions;
+        } catch (e) {
+            console.log("JSON array parsing failed");
+        }
+    }
+    
+    // Try individual question objects
+    const questionMatches = text.match(/\{[^}]+\}/g);
+    if (questionMatches) {
+        questions = questionMatches
+            .map(q => {
+                try {
+                    return JSON.parse(q);
+                } catch (parseErr) {
+                    console.warn(`Failed to parse question object: ${q}`);
+                    return null;
+                }
+            })
+            .filter(q => q !== null);
+        
+        if (questions.length > 0) {
+            console.log(`Found ${questions.length} individual question objects`);
+            return questions;
+        }
+    }
+    
+    // Last resort: manual extraction
+    return tryManualExtraction(text);
 }
 
 module.exports = {

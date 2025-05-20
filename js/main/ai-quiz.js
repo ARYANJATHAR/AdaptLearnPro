@@ -177,135 +177,72 @@ export const AIQuizApp = {
         console.log(`Tracked ${usedInSession.length} questions as used. Total used: ${this.usedQuestions.size}`);
     },
     
-    // Generate new questions when restarting the quiz
+    updateLoadingUI(text, subtext, progress) {
+        const loadingText = document.querySelector('#loading-container p.text-lg');
+        const loadingSubtext = document.querySelector('#loading-container p.text-sm');
+        const progressBar = document.querySelector('.progress-loading-bar');
+        
+        if (loadingText) loadingText.textContent = text;
+        if (loadingSubtext) loadingSubtext.textContent = subtext;
+        if (progressBar) progressBar.style.width = `${progress}%`;
+    },
+
+    showLoading() {
+        document.getElementById('quiz-content').classList.add('hidden');
+        document.getElementById('loading-container').classList.remove('hidden');
+        document.getElementById('results').classList.add('hidden');
+    },
+
+    hideLoading() {
+        document.getElementById('loading-container').classList.add('hidden');
+        document.getElementById('quiz-content').classList.remove('hidden');
+    },
+
+    resetQuizState() {
+        // Reset all quiz-related state
+        State.reset();
+        State.totalQuestions = this.totalQuestions;
+        State.correctStreak = 0;
+        State.incorrectStreak = 0;
+        
+        // Reset UI elements
+        document.getElementById('progress-text').textContent = `Question 1 of ${this.totalQuestions}`;
+        document.getElementById('progress-bar').style.width = '10%';
+        document.getElementById('correct').textContent = '0';
+        document.getElementById('incorrect').textContent = '0';
+        document.getElementById('attempted').textContent = '0';
+        document.getElementById('difficulty-level').textContent = '1';
+        
+        const difficultyBadge = document.getElementById('difficulty-badge');
+        if (difficultyBadge) {
+            difficultyBadge.className = 'difficulty-badge difficulty-1 text-white text-xs px-2 py-1 rounded';
+            difficultyBadge.textContent = 'Easy';
+        }
+        
+        console.log("[AI-QUIZ DEBUG] State reset complete. Streaks:", State.correctStreak, State.incorrectStreak);
+    },
+
     async restartWithNewQuestions() {
         try {
             console.log("Beginning restart with new questions");
-            
-            // Track questions that were used
             this.trackUsedQuestions();
             
-            // Show loading again
-            document.getElementById('quiz-content').classList.add('hidden');
-            document.getElementById('loading-container').classList.remove('hidden');
-            document.getElementById('results').classList.add('hidden');
+            this.showLoading();
+            this.updateLoadingUI('Generating new questions...', 'Creating a fresh quiz for you', 10);
             
-            const loadingText = document.querySelector('#loading-container p.text-lg');
-            const loadingSubtext = document.querySelector('#loading-container p.text-sm');
-            const progressBar = document.querySelector('.progress-loading-bar');
+            // Reset state and UI
+            this.resetQuizState();
             
-            loadingText.textContent = 'Generating new questions...';
-            loadingSubtext.textContent = 'Creating a fresh quiz for you';
-            progressBar.style.width = '10%';
-            
-            // Make sure we're using the original question count set by the user
-            const userQuestionCount = parseInt(localStorage.getItem('questionCount')) || 10;
-            this.totalQuestions = userQuestionCount;
-            State.totalQuestions = this.totalQuestions;
-            
-            // Reset progress display 
-            document.getElementById('progress-text').textContent = `Question 1 of ${this.totalQuestions}`;
-            document.getElementById('progress-bar').style.width = '10%';
-            
-            // Reset statistics display
-            document.getElementById('correct').textContent = '0';
-            document.getElementById('incorrect').textContent = '0';
-            document.getElementById('attempted').textContent = '0';
-            document.getElementById('difficulty-level').textContent = '1';
-            const difficultyBadge = document.getElementById('difficulty-badge');
-            if (difficultyBadge) {
-                difficultyBadge.className = 'difficulty-badge difficulty-1 text-white text-xs px-2 py-1 rounded';
-                difficultyBadge.textContent = 'Easy';
-            }
-            
-            // Make sure the question container is properly reset and visible
-            const questionContainer = document.querySelector('#question-container');
-            if (questionContainer) {
-                questionContainer.style.display = 'block';
-                questionContainer.classList.remove('hidden');
-                questionContainer.style.opacity = '1';
-                questionContainer.style.height = 'auto';
-                questionContainer.style.overflow = 'visible';
-                questionContainer.style.margin = '';
-                questionContainer.style.padding = '1.5rem';
-            }
-            
-            // Make sure options container is empty to start fresh
-            const optionsContainer = document.querySelector('#options-container');
-            if (optionsContainer) {
-                optionsContainer.innerHTML = '';
-            }
-            
-            // Completely reset all quiz state
-            State.reset();
-            
-            // Double-check that streaks are properly reset
-            if (State.correctStreak !== 0 || State.incorrectStreak !== 0) {
-                console.warn("[AI-QUIZ DEBUG] Streaks not properly reset by State.reset(), forcing reset now");
-                State.correctStreak = 0;
-                State.incorrectStreak = 0;
-            }
-            console.log("[AI-QUIZ DEBUG] State reset complete. Streaks:", State.correctStreak, State.incorrectStreak);
-            
-            State.totalQuestions = this.totalQuestions;
-            
-            // Fetch new questions for all difficulty levels
+            // Fetch new questions
             await this.fetchQuestionsForAllDifficulties();
             
-            // Check if we have enough unused questions for each difficulty level
-            let needMoreQuestions = false;
-            
-            for (let difficulty = 1; difficulty <= 3; difficulty++) {
-                const unusedQuestionsCount = this.questions[difficulty].filter(
-                    q => !this.usedQuestions.has(q.question)
-                ).length;
-                
-                console.log(`[AI-QUIZ DEBUG] Difficulty ${difficulty}: ${unusedQuestionsCount} unused questions available`);
-                
-                // If we have fewer unused questions than the user selected, fetch more
-                if (unusedQuestionsCount < this.totalQuestions) {
-                    needMoreQuestions = true;
-                    loadingText.textContent = `Fetching more ${getDifficultyName(difficulty)} questions...`;
-                    
-                    // Fetch enough additional questions to reach the user-selected count
-                    const additionalCount = this.totalQuestions;
-                    
-                    console.log(`[AI-QUIZ DEBUG] Fetching ${additionalCount} additional questions for difficulty ${difficulty}`);
-                    
-                    const additionalQuestions = await this.fetchAdditionalQuestions(difficulty, additionalCount);
-                    
-                    // Filter out used questions and add new ones
-                    const newQuestions = additionalQuestions.filter(q => !this.usedQuestions.has(q.question));
-                    
-                    console.log(`[AI-QUIZ DEBUG] Added ${newQuestions.length} new questions for difficulty ${difficulty}`);
-                    
-                    this.questions[difficulty] = [
-                        ...this.questions[difficulty],
-                        ...newQuestions
-                    ];
-                }
-            }
-            
-            if (needMoreQuestions) {
-                // If we added more questions, show a completion message
-                loadingText.textContent = 'Additional questions ready!';
-                progressBar.style.width = '100%';
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-            
-            console.log("[AI-QUIZ DEBUG] About to initialize quiz with new questions");
-            
-            // Update the quiz with new questions
+            // Update quiz with new questions
             QuizLogic.customQuestions = this.questions;
             QuizLogic.useCustomQuestions = true;
             
-            // Init the quiz with a slight delay to ensure all DOM updates are processed
             setTimeout(() => {
                 QuizLogic.initQuiz();
-                
-                // Show quiz content
-                document.getElementById('loading-container').classList.add('hidden');
-                document.getElementById('quiz-content').classList.remove('hidden');
+                this.hideLoading();
                 console.log("[AI-QUIZ DEBUG] Initialized quiz with new questions and showing content");
             }, 300);
             
@@ -313,14 +250,9 @@ export const AIQuizApp = {
             console.error('Error restarting quiz with new questions:', error);
             alert('Failed to generate new questions. Restarting with existing questions.');
             
-            // Completely reset state since we're in an error condition
-            State.reset();
-            State.totalQuestions = this.totalQuestions;
-            
-            // Fallback to current questions
+            this.resetQuizState();
             QuizLogic.initQuiz();
-            document.getElementById('loading-container').classList.add('hidden');
-            document.getElementById('quiz-content').classList.remove('hidden');
+            this.hideLoading();
         }
     },
     

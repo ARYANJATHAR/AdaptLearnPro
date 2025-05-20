@@ -103,21 +103,28 @@ export const UI = {
         quizContent.classList.add(`difficulty-level-${State.currentDifficulty}`);
         
         // Update progress with correct total question count
-        const progressPercentage = (State.totalAttempted / State.totalQuestions) * 100;
+        // Only show 100% when all questions are actually complete
+        const isQuizComplete = State.totalAttempted === State.totalQuestions;
+        
+        // Calculate progress percentage, capped at 95% until complete
+        let progressPercentage;
+        if (isQuizComplete) {
+            progressPercentage = 100;
+        } else {
+            // Calculate percentage based on current question number
+            const basePercentage = (State.totalAttempted / State.totalQuestions) * 100;
+            progressPercentage = Math.min(basePercentage, 95);
+        }
+        
         this.progressBar.style.width = `${progressPercentage}%`;
         
-        // FIX: The question number display needs to be fixed
-        // Since totalAttempted increments after answering, we need to display the current question number
-        // For question displays, we need to show the question we're currently on (totalAttempted + 1)
-        // unless we've reached the end
-        const currentQuestionNumber = Math.min(State.totalAttempted + 1, State.totalQuestions);
+        // For question displays, show total questions when complete
+        const currentQuestionNumber = isQuizComplete ? State.totalQuestions : State.totalAttempted + 1;
         
         this.progressText.textContent = `Question ${currentQuestionNumber} of ${State.totalQuestions}`;
         
         // Log the progress update for debugging
-        console.log(`[UI DEBUG] Updated progress: ${currentQuestionNumber}/${State.totalQuestions} (${progressPercentage.toFixed(0)}%)`);
-        
-        // Removed streak progress feedback - no longer showing this to the user
+        console.log(`[UI DEBUG] Updated progress: ${currentQuestionNumber}/${State.totalQuestions} (${progressPercentage.toFixed(0)}%) - Quiz Complete: ${isQuizComplete}`);
     },
     
     showFeedback(message, bgClass) {
@@ -151,6 +158,25 @@ export const UI = {
         }
     },
     
+    resetQuestionContainer() {
+        if (this.questionContainer) {
+            this.questionContainer.style.display = 'block';
+            this.questionContainer.classList.remove('hidden');
+            this.questionContainer.style.opacity = '1';
+            this.questionContainer.style.height = 'auto';
+            this.questionContainer.style.overflow = 'visible';
+            this.questionContainer.style.margin = '';
+            this.questionContainer.style.padding = '1.5rem';
+        }
+    },
+    
+    initializeUI() {
+        // Initialize question container
+        this.resetQuestionContainer();
+        
+        // ... existing code ...
+    },
+    
     renderQuestion(question, previousAnswer = null) {
         console.log('Rendering question:', question);
         
@@ -168,13 +194,7 @@ export const UI = {
         }
         
         // Make sure the question container is visible
-        this.questionContainer.style.display = 'block';
-        this.questionContainer.classList.remove('hidden');
-        this.questionContainer.style.opacity = '1';
-        this.questionContainer.style.height = 'auto';
-        this.questionContainer.style.overflow = 'visible';
-        this.questionContainer.style.margin = '';
-        this.questionContainer.style.padding = '1.5rem';
+        this.resetQuestionContainer();
         
         // Update question text
         this.questionText.textContent = question.question;
