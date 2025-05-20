@@ -42,11 +42,8 @@ Populate the .env file with the necessary environment variables.
 🧪 Run the App
 npm run dev
 
-
+```
 
 📄 License
-This project is licensed under the MIT License.
-
-
 This project is licensed under the MIT License.
 
