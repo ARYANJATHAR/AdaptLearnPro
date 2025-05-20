@@ -4,7 +4,7 @@ AdaptLearnPro is an intelligent quiz application designed to enhance the learnin
 
 ## 🚀 Live Demo
 
-🔗 [Try the Live App](https://ai-quiz-app-woad.vercel.app)
+🔗 [Try the Live App](https://adapt-learn-pro.vercel.app/)
 
 ## 🎯 Features
 
