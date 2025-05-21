@@ -111,6 +111,8 @@ function loadResultsData() {
 function updateResultsUI(data) {
     if (!data) return;
     
+    console.log('Updating results UI with data:', data);
+    
     // Update score
     const scoreElements = document.querySelector('.flex.justify-center.text-5xl.font-bold').children;
     if (scoreElements && scoreElements.length >= 2) {
@@ -125,8 +127,25 @@ function updateResultsUI(data) {
         if (spans.length >= 3) {
             spans[0].textContent = data.correct;
             spans[1].textContent = data.total;
-            spans[2].textContent = `${Math.round((data.correct / data.total) * 100)}%`;
+            spans[2].textContent = `${data.score}%`;
         }
+        
+        // Update the message based on score
+        let message = '';
+        if (data.score === 100) {
+            message = 'Perfect score! You answered all questions correctly!';
+        } else if (data.score >= 80) {
+            message = 'Great job! You performed excellently!';
+        } else if (data.score >= 60) {
+            message = 'Good work! You\'re making progress!';
+        } else {
+            message = 'Keep practicing! You\'ll improve with time.';
+        }
+        
+        resultParagraph.innerHTML = resultParagraph.innerHTML.replace(
+            /Great job!.*?accuracy!/,
+            message
+        );
     }
     
     // Update indicators
@@ -138,14 +157,27 @@ function updateResultsUI(data) {
     // Update stats
     const statValues = document.querySelectorAll('.text-3xl.font-bold');
     if (statValues && statValues.length >= 3) {
-        if (data.timeTaken) statValues[0].textContent = formatTime(data.timeTaken);
-        if (data.fastestAnswer) statValues[1].textContent = `${data.fastestAnswer}s`;
-        if (data.hotstreak) statValues[2].textContent = data.hotstreak;
+        // Format time taken
+        if (data.timeTaken) {
+            const minutes = Math.floor(data.timeTaken / 60);
+            const seconds = data.timeTaken % 60;
+            statValues[0].textContent = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+        }
+        
+        // Format fastest answer
+        if (data.fastestAnswer) {
+            statValues[1].textContent = `${data.fastestAnswer}s`;
+        }
+        
+        // Update streak
+        if (data.hotstreak) {
+            statValues[2].textContent = data.hotstreak;
+        }
     }
 
     // Update topics
     const topicsContainer = document.getElementById('topics-container');
-    if (topicsContainer && data.topicsToWorkOn) {
+    if (topicsContainer && data.topicsToWorkOn && data.topicsToWorkOn.length > 0) {
         // Clear existing topics
         topicsContainer.innerHTML = '';
         
@@ -174,6 +206,15 @@ function updateResultsUI(data) {
         
         // Re-attach toggle listeners
         setupTopicToggles();
+    } else if (topicsContainer) {
+        // If no topics to work on, show a positive message
+        topicsContainer.innerHTML = `
+            <div class="bg-green-50 rounded-lg p-3">
+                <p class="text-green-700 text-sm">
+                    Great work! You've mastered all the topics in this quiz.
+                </p>
+            </div>
+        `;
     }
 }
 
@@ -181,7 +222,7 @@ function updateResultsUI(data) {
  * Update question indicators based on results
  */
 function updateQuestionIndicators(results, container) {
-    if (!container) return;
+    if (!container || !Array.isArray(results)) return;
     
     // Debug: Log the results array to check values
     console.log('Question Results for Indicators:', results);
@@ -189,10 +230,15 @@ function updateQuestionIndicators(results, container) {
     // Clear existing indicators
     container.innerHTML = '';
     
-    // Create new indicators
-    results.forEach((result, index) => {
+    // Filter out any undefined or null results
+    const validResults = results.filter(result => result && typeof result.correct !== 'undefined');
+    
+    // Create new indicators only for valid results
+    validResults.forEach((result, index) => {
         const indicator = document.createElement('div');
-        const isCorrect = result.correct === true; // Ensure boolean comparison
+        
+        // Check if the answer was correct
+        const isCorrect = result.correct;
         
         // Debug: Log each result's correct status
         console.log(`Question ${index + 1} correct:`, isCorrect, result);

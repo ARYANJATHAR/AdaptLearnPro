@@ -35,7 +35,12 @@ export const ResultsManager = {
     saveQuizResultsData() {
         console.log('Saving quiz results. Question history:', State.questionHistory);
         
-        const questionResults = State.questionHistory.map(item => {
+        // Filter out any invalid history items
+        const validHistory = State.questionHistory.filter(item => 
+            item && item.question && typeof item.selectedAnswer !== 'undefined'
+        );
+        
+        const questionResults = validHistory.map(item => {
             console.log('Processing history item:', item);
             
             const wasCorrect = item.selectedAnswer === item.question.correctAnswer;
@@ -45,17 +50,22 @@ export const ResultsManager = {
                 question: item.question.question,
                 correct: wasCorrect,
                 difficulty: item.difficulty,
-                answerTime: item.answerTime
+                answerTime: item.answerTime || 0,
+                selectedAnswer: item.selectedAnswer,
+                correctAnswer: item.question.correctAnswer
             };
         });
 
         const topicsToWorkOn = this.analyzeTopicsToWorkOn();
         
+        // Use the actual number of valid questions
+        const totalQuestions = validHistory.length;
+        
         const resultsData = {
-            total: State.totalAttempted,
+            total: totalQuestions,
             correct: State.totalCorrect,
-            incorrect: State.totalIncorrect,
-            score: Math.round((State.totalCorrect / State.totalAttempted) * 100),
+            incorrect: totalQuestions - State.totalCorrect, // Ensure incorrect count matches
+            score: Math.round((State.totalCorrect / totalQuestions) * 100),
             highestDifficulty: State.highestDifficulty,
             timeTaken: State.totalQuizTime,
             fastestAnswer: State.fastestAnswerTime === Infinity ? 0 : State.fastestAnswerTime,
@@ -65,75 +75,59 @@ export const ResultsManager = {
             isAIQuiz: this.useCustomQuestions
         };
         
+        console.log('Saving quiz results data:', resultsData);
         sessionStorage.setItem('quizResults', JSON.stringify(resultsData));
     },
     
     analyzeTopicsToWorkOn() {
-        const incorrectQuestions = State.questionHistory.filter(item => !item.isCorrect);
+        const incorrectQuestions = State.questionHistory.filter(item => 
+            item.selectedAnswer !== item.question.correctAnswer
+        );
+        
+        // Get the quiz topic from localStorage
+        const quizTopic = localStorage.getItem('quizTopic');
         const topicsToWorkOn = [];
 
-        this.checkTopicCategory(incorrectQuestions, 
-            ['capital', '2 + 2', 'largest ocean'],
-            "Basic Facts & Geography",
-            "Review basic geography, simple mathematics, and general knowledge questions.",
-            topicsToWorkOn
-        );
+        if (incorrectQuestions.length > 0) {
+            // Group incorrect questions by subtopics or concepts
+            const concepts = incorrectQuestions.reduce((acc, q) => {
+                // Extract key concepts from the question
+                const questionText = q.question.question.toLowerCase();
+                const words = questionText.split(' ')
+                    .filter(word => word.length > 3) // Filter out small words
+                    .filter(word => !['what', 'when', 'where', 'which', 'how', 'why', 'does', 'that'].includes(word));
+                
+                words.forEach(word => {
+                    if (!acc[word]) acc[word] = 0;
+                    acc[word]++;
+                });
+                return acc;
+            }, {});
 
-        this.checkTopicCategory(incorrectQuestions,
-            ['wrote', 'romeo', 'shakespeare'],
-            "Literature & Arts",
-            "Focus on famous authors, classic literature, and artistic works.",
-            topicsToWorkOn
-        );
+            // Find most common concepts
+            const commonConcepts = Object.entries(concepts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([concept]) => concept);
 
-        this.checkTopicCategory(incorrectQuestions,
-            ['planet', 'sun', 'mercury', 'venus'],
-            "Astronomy & Space",
-            "Study the solar system, planets, and their characteristics.",
-            topicsToWorkOn
-        );
-
-        this.checkTopicCategory(incorrectQuestions,
-            ['scientist', 'einstein', 'theory', 'quantum', 'uncertainty'],
-            "Physics & Scientific Theory",
-            "Review important scientific theories, quantum mechanics, and famous scientists.",
-            topicsToWorkOn
-        );
-
-        this.checkTopicCategory(incorrectQuestions,
-            ['element', 'chemical', 'symbol', 'potassium'],
-            "Chemistry",
-            "Study chemical elements, their symbols, and basic chemistry concepts.",
-            topicsToWorkOn
-        );
-
-        this.checkTopicCategory(incorrectQuestions,
-            ['square root', 'sorting', 'algorithm'],
-            "Mathematics & Computer Science",
-            "Practice mathematical calculations and algorithmic concepts.",
-            topicsToWorkOn
-        );
-
-        this.checkTopicCategory(incorrectQuestions,
-            ['war', 'world war', '1945', '1957', 'sputnik'],
-            "Historical Events",
-            "Review important historical dates, events, and their significance.",
-            topicsToWorkOn
-        );
-
-        this.checkTopicCategory(incorrectQuestions,
-            ['force', 'gravity', 'electromagnetic'],
-            "Physics Forces",
-            "Study fundamental forces in physics and their applications.",
-            topicsToWorkOn
-        );
-
-        // If no specific topics identified but there are incorrect answers
-        if (topicsToWorkOn.length === 0 && incorrectQuestions.length > 0) {
-            const question = incorrectQuestions[0].question.question;
+            // Add main topic review
             topicsToWorkOn.push({
-                name: "Question Review",
-                description: `Review this question: "${question}"`
+                name: `${quizTopic} Fundamentals`,
+                description: `Review basic concepts of ${quizTopic} focusing on areas where you made mistakes.`
+            });
+
+            // Add specific concept reviews
+            if (commonConcepts.length > 0) {
+                topicsToWorkOn.push({
+                    name: `${quizTopic} Concepts`,
+                    description: `Focus on these specific concepts: ${commonConcepts.join(', ')}.`
+                });
+            }
+
+            // Add practice suggestion
+            topicsToWorkOn.push({
+                name: `${quizTopic} Practice`,
+                description: `Practice more ${quizTopic} questions, especially on topics you found challenging.`
             });
         }
 
