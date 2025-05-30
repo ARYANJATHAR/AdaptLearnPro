@@ -15,8 +15,6 @@ AdaptLearnPro is an intelligent quiz application designed to enhance the learnin
 
 - **Frontend:** HTML, CSS, JavaScript
 - **Backend:** Node.js, Express.js
-- **Deployment:** Vercel
-
 
 
 
