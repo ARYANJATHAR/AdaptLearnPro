@@ -82,36 +82,59 @@ export const AIQuizApp = {
             const loadingSubtext = document.querySelector('#loading-container p.text-sm');
             const progressBar = document.querySelector('.progress-loading-bar');
             
-            // IMPORTANT: Use exactly the number of questions the user selected for EACH difficulty level
-            // This ensures we have enough questions regardless of level changes
-            const questionsPerLevel = {
-                1: this.totalQuestions, // User-selected count for Easy
-                2: this.totalQuestions, // User-selected count for Medium
-                3: this.totalQuestions  // User-selected count for Hard
-            };
+            // Calculate optimal batch size based on total questions
+            const batchSize = Math.min(10, Math.ceil(this.totalQuestions / 2));
+            const numBatches = Math.ceil(this.totalQuestions / batchSize);
             
-            console.log(`[AI-QUIZ DEBUG] Fetching ${this.totalQuestions} questions for EACH difficulty level (${this.totalQuestions * 3} total)`);
+            console.log(`[AI-QUIZ DEBUG] Fetching questions in ${numBatches} batches of ${batchSize}`);
             
             // Fetch questions for each difficulty level (1-3)
             for (let difficulty = 1; difficulty <= 3; difficulty++) {
-                // Update loading UI
                 loadingText.textContent = `Generating ${getDifficultyName(difficulty)} questions...`;
-                loadingSubtext.textContent = `Creating level ${difficulty} of 3`;
+                loadingSubtext.textContent = `Level ${difficulty} of 3`;
                 progressBar.style.width = `${(difficulty - 1) * 30 + 10}%`;
                 
-                // Add a small delay to show the loading message
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Fetch questions in smaller batches
+                for (let batch = 0; batch < numBatches; batch++) {
+                    const remainingNeeded = this.totalQuestions - this.questions[difficulty].length;
+                    if (remainingNeeded <= 0) break;
+                    
+                    const currentBatchSize = Math.min(batchSize, remainingNeeded);
+                    
+                    // Add a small delay between batches to prevent rate limiting
+                    if (batch > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                    
+                    // Fetch batch of questions
+                    const questionsForBatch = await this.fetchQuestions(difficulty, currentBatchSize);
+                    
+                    // Add non-duplicate questions to our pool
+                    const existingQuestions = new Set(this.questions[difficulty].map(q => q.question.toLowerCase().trim()));
+                    const newQuestions = questionsForBatch.filter(q => !existingQuestions.has(q.question.toLowerCase().trim()));
+                    
+                    this.questions[difficulty].push(...newQuestions);
+                    
+                    // Update progress
+                    const difficultyProgress = ((batch + 1) / numBatches) * 30;
+                    progressBar.style.width = `${(difficulty - 1) * 30 + difficultyProgress}%`;
+                    
+                    console.log(`[AI-QUIZ DEBUG] Batch ${batch + 1}/${numBatches} for difficulty ${difficulty}: Got ${newQuestions.length} new questions`);
+                }
                 
-                // Fetch questions for this difficulty
-                const questionsForLevel = await this.fetchQuestions(difficulty, questionsPerLevel[difficulty]);
-                
-                // Store the questions at the appropriate difficulty level
-                this.questions[difficulty] = questionsForLevel;
-                
-                console.log(`[AI-QUIZ DEBUG] Fetched ${questionsForLevel.length} questions for difficulty ${difficulty}`);
-                
-                // Update progress again after fetching
-                progressBar.style.width = `${difficulty * 30}%`;
+                // Verify we have enough questions
+                if (this.questions[difficulty].length < this.totalQuestions) {
+                    console.warn(`[AI-QUIZ DEBUG] Not enough unique questions for difficulty ${difficulty}. Got ${this.questions[difficulty].length}/${this.totalQuestions}`);
+                    
+                    // Try one final batch if needed
+                    const remaining = this.totalQuestions - this.questions[difficulty].length;
+                    if (remaining > 0) {
+                        const finalBatch = await this.fetchQuestions(difficulty, remaining * 2); // Request extra to account for duplicates
+                        const existingQuestions = new Set(this.questions[difficulty].map(q => q.question.toLowerCase().trim()));
+                        const newQuestions = finalBatch.filter(q => !existingQuestions.has(q.question.toLowerCase().trim()));
+                        this.questions[difficulty].push(...newQuestions.slice(0, remaining));
+                    }
+                }
             }
             
             // Show completion

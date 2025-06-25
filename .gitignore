@@ -3,21 +3,64 @@ node_modules/
 npm-debug.log
 yarn-debug.log
 yarn-error.log
+# package-lock.json  # Usually this should be committed for consistent dependencies
+yarn.lock
 
-# Environment variables
+# Environment variables and secrets
 .env
+.env.*
+!.env.example
+!.env.template
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.backup
+.environment
+
+# API Keys and sensitive files
+config/secrets.json
+config/keys.json
+secrets/
+keys/
+certs/
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+api-keys.txt
+credentials.json
 
 # Build files
 /dist
 /build
+/out
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
 
 # Logs
-logs
+logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output/
 
 # OS generated files
 .DS_Store
@@ -27,9 +70,67 @@ logs
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
 # IDE specific files
 .idea/
 .vscode/
 *.swp
-*.swo 
+*.swo
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Backup and archive files
+*.backup
+*.bak
+*.old
+*.orig
+*.save
+*.zip
+*.tar.gz
+*.rar
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+.docker/
+docker-compose.override.yml
+Dockerfile.dev
+.dockerignore.local
+
+# Deployment and CI/CD
+.vercel/
+.netlify/
+.aws/
+.gcp/
+deployment/
+deploy.sh
+*.deploy
+
+# Testing
+.jest/
+.coverage/
+test-results/
+playwright-report/
+
+# Miscellaneous
+.cache/
+.temp/
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.eslintcache
+.stylelintcache 

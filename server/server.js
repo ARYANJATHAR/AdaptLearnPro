@@ -53,7 +53,36 @@ app.post('/api/quiz/generate', async (req, res) => {
     
     console.log(`Generating ${questionCount} ${diffLevel}-level questions about "${topic}"...`);
     
-    const questions = await generateQuizQuestions(topic, diffLevel, questionCount);
+    // Set a timeout for the question generation
+    const timeoutMs = 30000; // 30 seconds
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Question generation timed out')), timeoutMs);
+    });
+    
+    // Race between question generation and timeout
+    const questions = await Promise.race([
+      generateQuizQuestions(topic, diffLevel, questionCount),
+      timeoutPromise
+    ]);
+    
+    // Validate the generated questions
+    if (!Array.isArray(questions) || questions.length === 0) {
+      console.error('No valid questions generated');
+      return res.status(422).json({ 
+        success: false,
+        error: 'Failed to generate valid questions',
+        data: {
+          topic,
+          difficulty: diffLevel,
+          questions: []
+        }
+      });
+    }
+    
+    // Check if we got enough questions
+    if (questions.length < questionCount) {
+      console.warn(`Only generated ${questions.length}/${questionCount} questions`);
+    }
     
     console.log(`Successfully generated ${questions.length} questions.`);
     
@@ -62,7 +91,8 @@ app.post('/api/quiz/generate', async (req, res) => {
       data: {
         topic,
         difficulty: diffLevel,
-        questions
+        questions,
+        generated: questions.length
       }
     });
     
@@ -73,7 +103,10 @@ app.post('/api/quiz/generate', async (req, res) => {
     let errorMessage = 'Failed to generate quiz questions';
     let statusCode = 500;
     
-    if (error.message.includes('API key')) {
+    if (error.message.includes('timed out')) {
+      errorMessage = 'Question generation took too long. Try a smaller batch size.';
+      statusCode = 408;
+    } else if (error.message.includes('API key')) {
       errorMessage = 'Invalid API key or authentication issue';
       statusCode = 401;
     } else if (error.message.includes('429')) {

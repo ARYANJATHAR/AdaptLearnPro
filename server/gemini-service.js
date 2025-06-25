@@ -6,12 +6,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Initialize the model
 const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash",  // Fast, good for most tasks
+    model: "gemini-2.5-flash-preview-04-17",  // Updated to Gemini 2.5 Flash Preview
     generationConfig: {
         temperature: 0.7,       // Controls randomness (0.0-1.0)
         topK: 3,                // Increased for more diversity
         topP: 0.9,              // Slightly reduced for better balance
         maxOutputTokens: 2048,  // Maximum length of response
+        candidateCount: 1,      // Number of candidate responses to generate
     },
 });
 
