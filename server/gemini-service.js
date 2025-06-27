@@ -1,16 +1,22 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config();
 
+// Check if API key is available
+if (!process.env.GEMINI_API_KEY) {
+    console.error('GEMINI_API_KEY is not set in environment variables');
+    throw new Error('GEMINI_API_KEY is required');
+}
+
 // Initialize with API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Initialize the model
+// Initialize the model with correct model name
 const model = genAI.getGenerativeModel({ 
-    model: "gemini-2.5-flash-preview-04-17",  // Updated to Gemini 2.5 Flash Preview
+    model: "gemini-1.5-flash",  // Use stable version instead of 2.0-flash
     generationConfig: {
         temperature: 0.7,       // Controls randomness (0.0-1.0)
-        topK: 3,                // Increased for more diversity
-        topP: 0.9,              // Slightly reduced for better balance
+        topK: 40,               // Increased for more diversity
+        topP: 0.95,             // Slightly increased for better balance
         maxOutputTokens: 2048,  // Maximum length of response
         candidateCount: 1,      // Number of candidate responses to generate
     },
@@ -159,7 +165,25 @@ async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
         return uniqueQuestions.slice(0, count);
         
     } catch (error) {
-        console.error('Error generating quiz questions:', error);
+        console.error('Detailed error in generateQuizQuestions:', error);
+        
+        // Check for specific API key errors
+        if (error.message && error.message.includes('API_KEY')) {
+            console.error('API Key Error - Check if your Gemini API key is valid');
+            throw new Error('Invalid API key. Please check your GEMINI_API_KEY environment variable.');
+        }
+        
+        if (error.message && error.message.includes('PERMISSION_DENIED')) {
+            console.error('Permission denied - API key may not have proper permissions');
+            throw new Error('API key does not have permission to access Gemini API.');
+        }
+        
+        if (error.message && error.message.includes('QUOTA_EXCEEDED')) {
+            console.error('Quota exceeded - API key has reached its limit');
+            throw new Error('API quota exceeded. Please check your API usage limits.');
+        }
+        
+        console.error('Falling back to default questions due to error');
         return generateFallbackQuestions(topic, difficulty, count);
     }
 }
