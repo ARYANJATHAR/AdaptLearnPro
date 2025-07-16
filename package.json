@@ -2,10 +2,11 @@
   "name": "ai_quiz_app",
   "version": "1.0.0",
   "description": "AI Quiz Application with Express.js server",
-  "main": "server/server.js",
+  "main": "backend/server/server.js",
   "scripts": {
-    "start": "node server/server.js",
-    "dev": "nodemon server/server.js"
+    "start": "node backend/server/server.js",
+    "dev": "nodemon backend/server/server.js",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
