@@ -2,9 +2,6 @@
 
 AdaptLearnPro is an intelligent quiz application designed to enhance the learning experience by adapting to each user's performance. It dynamically adjusts question difficulty, ensuring that learners are consistently challenged at an appropriate level. The project is ideal for students, educators, and developers interested in adaptive learning and edtech.
 
-## 🚀 Live Demo
-
-🔗 [Try the Live App](https://adapt-learn-pro.vercel.app/)
 
 ## 🎯 Features
 
@@ -20,7 +17,17 @@ AdaptLearnPro is an intelligent quiz application designed to enhance the learnin
 - **Backend:** Node.js, Express.js
 - **Deployment:** Vercel
 
-
+## 📁 Project Structure
+AdaptLearnPro/
+├── assets/ # Audio and other assets
+├── css/ # Stylesheets
+├── html/ # HTML files
+├── js/ # JavaScript logic
+├── server/ # Backend Express server
+├── .env.example # Sample environment variables
+├── index.html # Main entry point
+├── package.json # Project dependencies
+└── vercel.json # Vercel deployment configuration
 
 
 ## ⚙️ Installation
