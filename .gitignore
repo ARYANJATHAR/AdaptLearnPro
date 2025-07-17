@@ -134,3 +134,6 @@ playwright-report/
 .tern-port
 .eslintcache
 .stylelintcache 
+
+#documentation
+.tasks.md

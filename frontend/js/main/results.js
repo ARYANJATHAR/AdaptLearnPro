@@ -1,42 +1,12 @@
 // Results page functionality
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Setup UI interactions
-    setupTopicToggles();
+    // Setup button handlers
     setupButtonHandlers();
     
     // Load results data if available
     loadResultsData();
 });
-
-/**
- * Set up topic toggle functionality
- */
-function setupTopicToggles() {
-    const topicToggles = document.querySelectorAll('.topic-toggle');
-    
-    topicToggles.forEach(toggle => {
-        toggle.addEventListener('click', () => {
-            // Find parent topic item
-            const topicItem = toggle.closest('.bg-gray-50');
-            const detailsSection = topicItem.querySelector('.topic-details');
-            const icon = toggle.querySelector('i');
-            
-            // Toggle details visibility
-            if (detailsSection) {
-                if (detailsSection.classList.contains('hidden')) {
-                    detailsSection.classList.remove('hidden');
-                    icon.classList.remove('fa-chevron-right');
-                    icon.classList.add('fa-chevron-down');
-                } else {
-                    detailsSection.classList.add('hidden');
-                    icon.classList.remove('fa-chevron-down');
-                    icon.classList.add('fa-chevron-right');
-                }
-            }
-        });
-    });
-}
 
 /**
  * Set up button click handlers
@@ -168,48 +138,6 @@ function updateResultsUI(data) {
         if (data.fastestAnswer) {
             statValues[1].textContent = `${data.fastestAnswer}s`;
         }
-    }
-
-    // Update topics
-    const topicsContainer = document.getElementById('topics-container');
-    if (topicsContainer && data.topicsToWorkOn && data.topicsToWorkOn.length > 0) {
-        // Clear existing topics
-        topicsContainer.innerHTML = '';
-        
-        // Add each topic
-        data.topicsToWorkOn.forEach((topic, index) => {
-            const topicElement = document.createElement('div');
-            topicElement.className = 'bg-gray-50 rounded-lg p-3';
-            
-            const topicHTML = `
-                <div class="flex items-center">
-                    <button class="topic-toggle mr-2 text-gray-400" data-topic-index="${index}">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                    <h3 class="text-sm font-medium">${topic.name}</h3>
-                </div>
-                <div class="topic-details ml-6 mt-2 hidden">
-                    <p class="text-gray-600 text-sm">
-                        ${topic.description}
-                    </p>
-                </div>
-            `;
-            
-            topicElement.innerHTML = topicHTML;
-            topicsContainer.appendChild(topicElement);
-        });
-        
-        // Re-attach toggle listeners
-        setupTopicToggles();
-    } else if (topicsContainer) {
-        // If no topics to work on, show a positive message
-        topicsContainer.innerHTML = `
-            <div class="bg-green-50 rounded-lg p-3">
-                <p class="text-green-700 text-sm">
-                    Great work! You've mastered all the topics in this quiz.
-                </p>
-            </div>
-        `;
     }
 }
 
