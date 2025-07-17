@@ -72,8 +72,6 @@ export const AnswerHandler = {
         
         console.log(`[QUIZ DEBUG] Correct Answer! Current streak: ${State.correctStreak}, Difficulty: ${State.currentDifficulty}`);
         
-        State.longestStreak = Math.max(State.longestStreak, State.correctStreak);
-        
         AudioManager.playCorrect();
         
         selectedOption.classList.add('correct', 'animate-pulse');
@@ -95,11 +93,9 @@ export const AnswerHandler = {
     handleIncorrectAnswer(selectedOption) {
         State.totalIncorrect++;
         State.incorrectStreak++;
-        
-        const oldStreak = State.correctStreak;
         State.correctStreak = 0;
         
-        console.log(`[QUIZ DEBUG] Wrong Answer! Correct streak reset from ${oldStreak} to ${State.correctStreak}, Incorrect streak: ${State.incorrectStreak}`);
+        console.log(`[QUIZ DEBUG] Wrong Answer! Streak reset, Incorrect streak: ${State.incorrectStreak}`);
         
         AudioManager.playIncorrect();
         

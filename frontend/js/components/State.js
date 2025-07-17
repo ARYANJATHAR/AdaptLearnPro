@@ -3,7 +3,6 @@ export const State = {
     currentDifficulty: 1,
     correctStreak: 0,
     incorrectStreak: 0,
-    longestStreak: 0,
     answeredQuestions: [],
     currentQuestion: null,
     totalQuestions: 10,
@@ -43,10 +42,9 @@ export const State = {
         this.currentDifficulty = 1;
         this.highestDifficulty = 1;
         
-        // IMPORTANT: Explicitly reset streak counters
+        // Reset streak counters
         this.correctStreak = 0;
         this.incorrectStreak = 0;
-        this.longestStreak = 0;
         
         this.quizStartTime = Date.now();
         this.currentQuestionStartTime = Date.now();

@@ -87,44 +87,42 @@ export const UI = {
     },
     
     updateStats() {
-        this.correctDisplay.textContent = State.totalCorrect;
-        this.incorrectDisplay.textContent = State.totalIncorrect;
-        this.attemptedDisplay.textContent = State.totalAttempted;
-        this.difficultyLevel.textContent = State.currentDifficulty;
+        // Update score displays
+        if (this.correctDisplay) this.correctDisplay.textContent = State.totalCorrect;
+        if (this.incorrectDisplay) this.incorrectDisplay.textContent = State.totalIncorrect;
+        if (this.attemptedDisplay) this.attemptedDisplay.textContent = State.totalAttempted;
+        if (this.difficultyLevel) this.difficultyLevel.textContent = State.currentDifficulty;
         
         // Update difficulty badge
-        this.difficultyBadge.className = `difficulty-badge difficulty-${State.currentDifficulty} text-white text-xs px-2 py-1 rounded`;
-        this.difficultyBadge.textContent = State.currentDifficulty === 1 ? 'Easy' : 
-                                     State.currentDifficulty === 2 ? 'Medium' : 'Hard';
+        if (this.difficultyBadge) {
+            this.difficultyBadge.className = `difficulty-badge difficulty-${State.currentDifficulty} text-white text-xs px-2 py-1 rounded`;
+            this.difficultyBadge.textContent = State.currentDifficulty === 1 ? 'Easy' : 
+                                         State.currentDifficulty === 2 ? 'Medium' : 'Hard';
+        }
+        
+        // Calculate current question number (1-based index)
+        const currentQuestionNumber = State.currentQuestionIndex + 1;
+        const isQuizComplete = currentQuestionNumber > State.totalQuestions;
+        
+        // Update progress bar and text
+        if (this.progressBar && this.progressText) {
+            // Calculate progress percentage based on current question index
+            const progressPercentage = isQuizComplete ? 100 : (currentQuestionNumber / State.totalQuestions) * 100;
+            this.progressBar.style.width = `${progressPercentage}%`;
+            
+            // Update progress text
+            this.progressText.textContent = `Question ${Math.min(currentQuestionNumber, State.totalQuestions)} of ${State.totalQuestions}`;
+            
+            // Log the progress update for debugging
+            console.log(`[UI DEBUG] Updated progress: ${currentQuestionNumber}/${State.totalQuestions} (${progressPercentage.toFixed(0)}%)`);
+        }
         
         // Update question container difficulty styling
         const quizContent = document.getElementById('quiz-content');
-        quizContent.className = quizContent.className.replace(/difficulty-level-\d/g, '');
-        quizContent.classList.add(`difficulty-level-${State.currentDifficulty}`);
-        
-        // Update progress with correct total question count
-        // Only show 100% when all questions are actually complete
-        const isQuizComplete = State.totalAttempted === State.totalQuestions;
-        
-        // Calculate progress percentage, capped at 95% until complete
-        let progressPercentage;
-        if (isQuizComplete) {
-            progressPercentage = 100;
-        } else {
-            // Calculate percentage based on current question number
-            const basePercentage = (State.totalAttempted / State.totalQuestions) * 100;
-            progressPercentage = Math.min(basePercentage, 95);
+        if (quizContent) {
+            quizContent.className = quizContent.className.replace(/difficulty-level-\d/g, '');
+            quizContent.classList.add(`difficulty-level-${State.currentDifficulty}`);
         }
-        
-        this.progressBar.style.width = `${progressPercentage}%`;
-        
-        // For question displays, show total questions when complete
-        const currentQuestionNumber = isQuizComplete ? State.totalQuestions : State.totalAttempted + 1;
-        
-        this.progressText.textContent = `Question ${currentQuestionNumber} of ${State.totalQuestions}`;
-        
-        // Log the progress update for debugging
-        console.log(`[UI DEBUG] Updated progress: ${currentQuestionNumber}/${State.totalQuestions} (${progressPercentage.toFixed(0)}%) - Quiz Complete: ${isQuizComplete}`);
     },
     
     showFeedback(message, bgClass) {
@@ -321,6 +319,7 @@ export const UI = {
         if (this.finalScoreDisplay) this.finalScoreDisplay.textContent = `${score}%`;
         if (this.finalCorrectDisplay) this.finalCorrectDisplay.textContent = State.totalCorrect;
         if (this.finalIncorrectDisplay) this.finalIncorrectDisplay.textContent = State.totalIncorrect;
+        
         if (this.highestDifficultyDisplay) {
             this.highestDifficultyDisplay.textContent = State.highestDifficulty;
             
@@ -339,31 +338,7 @@ export const UI = {
             }
         }
         
-        // Add longest streak information
-        if (State.longestStreak > 0) {
-            // Remove any existing streak displays first
-            const existingStreakDisplays = document.querySelectorAll('.stats-card');
-            existingStreakDisplays.forEach(display => {
-                if (display.querySelector('p')?.textContent === 'Longest Streak') {
-                    display.remove();
-                }
-            });
-            
-            // Create a new stats card for the streak
-            const streakCard = document.createElement('div');
-            streakCard.className = 'stats-card bg-white p-4 rounded-lg shadow-md text-center';
-            streakCard.innerHTML = `
-                <div class="text-4xl font-bold text-yellow-600 mb-2" id="longest-streak">${State.longestStreak}</div>
-                <p class="text-gray-500">Longest Streak</p>
-            `;
-            
-            // Find the stats container and append the streak card
-            const statsContainer = document.querySelector('#results .flex.flex-wrap.justify-center');
-            if (statsContainer) {
-                statsContainer.appendChild(streakCard);
-            }
-        }
-        
+        // Removed streak card as per user request
         return score;
     },
     
@@ -382,6 +357,13 @@ export const UI = {
                                    item.difficulty === 2 ? 'bg-yellow-100 text-yellow-800' : 
                                    'bg-red-100 text-red-800';
             
+            // Get user's answer from the question history
+            const userAnswerIndex = item.selectedAnswer !== undefined ? item.selectedAnswer : null;
+            const userAnswer = userAnswerIndex !== null ? 
+                String.fromCharCode(65 + userAnswerIndex) : 'Not answered';
+            const correctAnswer = String.fromCharCode(65 + item.question.correctAnswer);
+            const isCorrect = item.isCorrect || false;
+            
             solutionItem.innerHTML = `
                 <div class="flex justify-between items-start mb-3">
                     <h4 class="font-medium">Question ${index + 1}</h4>
@@ -389,24 +371,65 @@ export const UI = {
                 </div>
                 <p class="mb-3">${item.question.question}</p>
                 <div class="space-y-2 mb-3">
-                    ${item.question.options.map((opt, i) => `
-                        <div class="flex items-center p-2 rounded ${
-                            i === item.question.correctAnswer && i === item.userAnswer ? 'bg-green-100' :
-                            i === item.question.correctAnswer ? 'bg-green-100' :
-                            i === item.userAnswer ? 'bg-red-100' : 'bg-gray-50'
-                        }">
-                            <span class="inline-block w-6 h-6 rounded-full mr-2 
-                                ${i === item.question.correctAnswer ? 'bg-green-200 text-green-800' : 
-                                  i === item.userAnswer ? 'bg-red-200 text-red-800' : 'bg-gray-200 text-gray-600'} 
-                                text-sm flex items-center justify-center">${String.fromCharCode(65 + i)}</span>
-                            <span>${opt}</span>
-                            ${i === item.question.correctAnswer ? 
-                                '<span class="ml-auto"><i class="fas fa-check text-green-600"></i></span>' : 
-                                i === item.userAnswer && i !== item.question.correctAnswer ? 
-                                '<span class="ml-auto"><i class="fas fa-times text-red-600"></i></span>' : ''}
-                        </div>
-                    `).join('')}
+                    ${item.question.options.map((opt, i) => {
+                        const isCorrect = i === item.question.correctAnswer;
+                        const isUserAnswer = i === userAnswerIndex;
+                        const isIncorrectAnswer = isUserAnswer && !isCorrect;
+                        
+                        let optionClass = 'flex items-center p-2 rounded ';
+                        let badgeClass = 'inline-block w-6 h-6 rounded-full mr-2 text-sm flex items-center justify-center ';
+                        let statusBadge = '';
+                        
+                        if (isCorrect && isUserAnswer) {
+                            // User got it right
+                            optionClass += 'bg-green-100 border border-green-200';
+                            badgeClass += 'bg-green-100 text-green-800 border border-green-300';
+                            statusBadge = '<span class="ml-auto text-green-600"><i class="fas fa-check"></i> Correct</span>';
+                        } else if (isCorrect) {
+                            // This is the correct answer
+                            optionClass += 'bg-green-50 border-2 border-green-300';
+                            badgeClass += 'bg-green-100 text-green-800 border-2 border-green-400';
+                            statusBadge = '<span class="ml-auto text-green-600 font-medium"><i class="fas fa-check"></i> Correct</span>';
+                        } else if (isIncorrectAnswer) {
+                            // User selected this incorrect answer
+                            optionClass += 'bg-red-50 border-2 border-red-300';
+                            badgeClass += 'bg-red-100 text-red-800 border-2 border-red-300';
+                            statusBadge = '<span class="ml-auto text-red-600 font-medium"><i class="fas fa-times"></i> Your Answer</span>';
+                        } else {
+                            // Not selected, not correct
+                            optionClass += 'bg-gray-50';
+                            badgeClass += 'bg-gray-100 text-gray-600 border border-gray-200';
+                        }
+                        
+                        return `
+                            <div class="${optionClass}">
+                                <span class="${badgeClass}">${String.fromCharCode(65 + i)}</span>
+                                <span>${opt}</span>
+                                ${statusBadge}
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
+                ${!item.isCorrect ? `
+                <div class="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 text-blue-600">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-700">
+                                ${userAnswerIndex !== null ? `
+                                    <span class="font-medium">You selected:</span> ${userAnswer}
+                                    ("${item.question.options[userAnswerIndex]}")
+                                    <br>
+                                ` : ''}
+                                <span class="font-medium">Correct answer:</span> ${correctAnswer}
+                                ("${item.question.options[item.question.correctAnswer]}")
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
             `;
             
             this.solutionsList.appendChild(solutionItem);

@@ -156,7 +156,7 @@ function updateResultsUI(data) {
     
     // Update stats
     const statValues = document.querySelectorAll('.text-3xl.font-bold');
-    if (statValues && statValues.length >= 3) {
+    if (statValues && statValues.length >= 2) {
         // Format time taken
         if (data.timeTaken) {
             const minutes = Math.floor(data.timeTaken / 60);
@@ -167,11 +167,6 @@ function updateResultsUI(data) {
         // Format fastest answer
         if (data.fastestAnswer) {
             statValues[1].textContent = `${data.fastestAnswer}s`;
-        }
-        
-        // Update streak
-        if (data.hotstreak) {
-            statValues[2].textContent = data.hotstreak;
         }
     }
 

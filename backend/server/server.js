@@ -12,14 +12,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from the root directory with proper MIME types
-app.use(express.static(path.join(__dirname, '..'), {
-    setHeaders: (res, path) => {
-        if (path.endsWith('.css')) {
+// Serve static files from the frontend directory with proper MIME types
+app.use(express.static(path.join(__dirname, '../../frontend'), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.css')) {
             res.setHeader('Content-Type', 'text/css');
-        } else if (path.endsWith('.js')) {
+        } else if (filePath.endsWith('.js')) {
             res.setHeader('Content-Type', 'application/javascript');
-        } else if (path.endsWith('.mp3')) {
+        } else if (filePath.endsWith('.mp3')) {
             res.setHeader('Content-Type', 'audio/mpeg');
         }
     }
@@ -127,7 +127,7 @@ app.post('/api/quiz/generate', async (req, res) => {
 
 // Catch-all route to serve the main HTML file
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'index.html'));
+  res.sendFile(path.join(__dirname, '../../frontend/index.html'));
 });
 
 // Error handling middleware

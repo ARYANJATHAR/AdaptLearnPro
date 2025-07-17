@@ -46,6 +46,37 @@ export const QuestionManager = {
     },
 
     loadNextQuestion() {
+        console.log('[NAV DEBUG] loadNextQuestion called. Current index:', State.currentQuestionIndex, 'History length:', State.questionHistory.length);
+        
+        // If we're not at the end of the history, just move to the next question
+        if (State.currentQuestionIndex < State.questionHistory.length - 1) {
+            State.currentQuestionIndex++;
+            const nextQuestion = State.questionHistory[State.currentQuestionIndex];
+            
+            // Update state from history
+            State.currentQuestion = nextQuestion.question;
+            State.answerSubmitted = nextQuestion.isSubmitted;
+            State.selectedAnswerIndex = nextQuestion.selectedAnswer;
+            State.currentDifficulty = nextQuestion.difficulty || State.currentDifficulty;
+            
+            // Update UI
+            UI.renderQuestion(State.currentQuestion, {
+                selectedAnswer: nextQuestion.selectedAnswer,
+                isSubmitted: nextQuestion.isSubmitted,
+                isCorrect: nextQuestion.selectedAnswer === nextQuestion.question.correctAnswer
+            });
+            
+            // Update navigation buttons
+            UI.updateNavigationButtons(
+                State.currentQuestionIndex > 0,
+                State.currentQuestionIndex < State.questionHistory.length - 1
+            );
+            
+            UI.updateStats();
+            return;
+        }
+        
+        // If we're at the end of history, save current question state if it exists
         if (State.currentQuestion) {
             const currentState = {
                 question: State.currentQuestion,
