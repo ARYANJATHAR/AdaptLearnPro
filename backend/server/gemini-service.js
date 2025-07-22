@@ -3,6 +3,11 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 // Check if API key is available
+console.log('=== Gemini Service Initialization ===');
+console.log('Environment:', process.env.NODE_ENV);
+console.log('Gemini API Key available:', !!process.env.GEMINI_API_KEY);
+console.log('Gemini API Key length:', process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.length : 0);
+
 if (!process.env.GEMINI_API_KEY) {
     console.error('GEMINI_API_KEY is not set in environment variables');
     throw new Error('GEMINI_API_KEY is required');
@@ -185,6 +190,8 @@ async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
         }
         
         console.error('Falling back to default questions due to error');
+        console.error('Error details:', error.message);
+        console.error('Stack trace:', error.stack);
         return generateFallbackQuestions(topic, difficulty, count);
     }
 }
