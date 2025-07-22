@@ -5,7 +5,7 @@ const { generateQuizQuestions } = require('./gemini-service');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
