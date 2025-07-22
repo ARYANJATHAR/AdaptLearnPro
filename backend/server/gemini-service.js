@@ -1,5 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const path = require('path');
+const usageTracker = require('./usage-tracker');
+const questionCache = require('./question-cache');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 // Check if API key is available
@@ -37,6 +39,13 @@ const model = genAI.getGenerativeModel({
  */
 async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
     try {
+        // Check cache first
+        const cachedQuestions = questionCache.get(topic, difficulty, count);
+        if (cachedQuestions) {
+            console.log(`[CACHE] Using cached questions for ${topic} (difficulty: ${difficulty})`);
+            return cachedQuestions;
+        }
+
         const difficultyLabels = {
             1: 'easy',
             2: 'medium',
@@ -129,6 +138,11 @@ async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
         const response = await result.response;
         const text = response.text();
 
+        // Track usage
+        const inputTokens = prompt.length / 4; // Rough estimate: 4 chars per token
+        const outputTokens = text.length / 4;
+        usageTracker.trackRequest(inputTokens, outputTokens);
+
         console.log("Raw AI response received, proceeding to extract questions");
 
         // Extract questions using utility function
@@ -168,7 +182,12 @@ async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
 
         console.log(`Generated ${uniqueQuestions.length} unique questions (filtered from ${validQuestions.length})`);
 
-        return uniqueQuestions.slice(0, count);
+        const finalQuestions = uniqueQuestions.slice(0, count);
+        
+        // Cache the generated questions
+        questionCache.set(topic, difficulty, count, finalQuestions);
+        
+        return finalQuestions;
 
     } catch (error) {
         console.error('Detailed error in generateQuizQuestions:', error);

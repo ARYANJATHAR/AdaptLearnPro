@@ -79,9 +79,25 @@ app.use(express.static(path.join(__dirname, '../../frontend'), {
     }
 }));
 
+// Import usage tracker and cache
+const usageTracker = require('./usage-tracker');
+const questionCache = require('./question-cache');
+
 // Routes
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
+});
+
+// Usage monitoring endpoint (protected)
+app.get('/api/usage', (req, res) => {
+  const usage = usageTracker.getCurrentUsage();
+  const cacheStats = questionCache.getStats();
+  
+  res.json({
+    usage: usage,
+    cache: cacheStats,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // API Key validation middleware
