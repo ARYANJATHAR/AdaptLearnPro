@@ -13,8 +13,8 @@ const PORT = process.env.PORT || 3000;
 
 // Configure Express to trust proxy headers in production
 if (process.env.NODE_ENV === 'production') {
-  // Trust Vercel's proxy configuration
-  app.set('trust proxy', true);
+  // Trust only the first proxy (Vercel's edge network)
+  app.set('trust proxy', 1);
 }
 
 // Security middleware
@@ -35,7 +35,7 @@ app.use(helmet({
   frameguard: process.env.NODE_ENV === 'production' ? true : false
 }));
 
-// Rate limiting
+// Rate limiting with Vercel-specific configuration
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
@@ -44,7 +44,9 @@ const apiLimiter = rateLimit({
   message: {
     success: false,
     error: 'Too many requests, please try again later.'
-  }
+  },
+  // Skip all validation for serverless deployment
+  validate: false
 });
 
 // Apply rate limiting to API routes

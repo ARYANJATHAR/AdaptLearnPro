@@ -17,7 +17,7 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Initialize the model with correct model name
-const model = genAI.getGenerativeModel({ 
+const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",  // Use stable version instead of 2.0-flash
     generationConfig: {
         temperature: 0.7,       // Controls randomness (0.0-1.0)
@@ -44,14 +44,14 @@ async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
         };
 
         const difficultyLevel = difficultyLabels[difficulty] || 'medium';
-        
+
         // Define specific guidelines for different difficulty levels
         const difficultyGuidelines = {
             easy: 'basic facts, simple concepts, and straightforward questions that test fundamental knowledge. Use simple language and obvious answer choices.',
             medium: 'intermediate concepts that bridge between basic and advanced knowledge. Questions should be moderately challenging but still approachable for someone with some familiarity with the topic. Avoid overly complex terminology.',
             hard: 'advanced concepts, complex relationships, and questions requiring deep understanding or analysis. These should challenge even knowledgeable users.'
         };
-        
+
         // Define specific examples for each difficulty level
         const difficultyExamples = {
             easy: [
@@ -128,17 +128,17 @@ async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
-        
+
         console.log("Raw AI response received, proceeding to extract questions");
-        
+
         // Extract questions using utility function
         let questions = extractQuestionsFromResponse(text);
-        
+
         if (!questions || questions.length === 0) {
             console.warn("Failed to extract questions, using fallback questions");
             return generateFallbackQuestions(topic, difficulty, count);
         }
-        
+
         // Preprocess options
         if (Array.isArray(questions)) {
             questions = preprocessQuestionOptions(questions);
@@ -146,17 +146,17 @@ async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
             console.error("Questions is not an array:", typeof questions);
             return generateFallbackQuestions(topic, difficulty, count);
         }
-        
+
         // Validate questions using utility function
         const validQuestions = questions.filter(validateQuestion);
-        
+
         console.log(`Validation complete: ${validQuestions.length} valid questions out of ${questions.length}`);
-        
+
         if (validQuestions.length === 0) {
             console.error('No valid questions found in response');
             return generateFallbackQuestions(topic, difficulty, count);
         }
-        
+
         // Remove duplicates
         const questionTexts = new Set();
         const uniqueQuestions = validQuestions.filter(q => {
@@ -165,30 +165,30 @@ async function generateQuizQuestions(topic, difficulty = 1, count = 5) {
             questionTexts.add(normalizedText);
             return true;
         });
-        
+
         console.log(`Generated ${uniqueQuestions.length} unique questions (filtered from ${validQuestions.length})`);
-        
+
         return uniqueQuestions.slice(0, count);
-        
+
     } catch (error) {
         console.error('Detailed error in generateQuizQuestions:', error);
-        
+
         // Check for specific API key errors
         if (error.message && error.message.includes('API_KEY')) {
             console.error('API Key Error - Check if your Gemini API key is valid');
             throw new Error('Invalid API key. Please check your GEMINI_API_KEY environment variable.');
         }
-        
+
         if (error.message && error.message.includes('PERMISSION_DENIED')) {
             console.error('Permission denied - API key may not have proper permissions');
             throw new Error('API key does not have permission to access Gemini API.');
         }
-        
+
         if (error.message && error.message.includes('QUOTA_EXCEEDED')) {
             console.error('Quota exceeded - API key has reached its limit');
             throw new Error('API quota exceeded. Please check your API usage limits.');
         }
-        
+
         console.error('Falling back to default questions due to error');
         console.error('Error details:', error.message);
         console.error('Stack trace:', error.stack);
@@ -205,32 +205,32 @@ function preprocessQuestionOptions(questions) {
             console.warn("Question had no options, added default options");
             return question;
         }
-        
+
         // Check if options is a single string containing A:, B:, etc.
         if (question.options.length === 1) {
             const optionText = question.options[0];
-            
+
             // Check if it's a typical A, B, C, D format
-            if (optionText.includes('A:') || optionText.includes('A.') || 
+            if (optionText.includes('A:') || optionText.includes('A.') ||
                 optionText.includes('\nA:') || optionText.includes('\nA.')) {
-                
+
                 const options = [];
-                
+
                 // More flexible regex to capture options with different formatting
                 // This handles A:, A., B:, B., etc. with or without newlines
                 const optionRegex = /(?:^|\n)([A-D][:.]\s*)(.*?)(?=(?:\n[A-D][:.]\s*)|$)/gs;
                 let match;
-                
+
                 while ((match = optionRegex.exec(optionText)) !== null) {
                     // Extract just the text after the letter marker
                     options.push(match[2].trim());
                 }
-                
+
                 // If we successfully extracted options
                 if (options.length > 0) {
                     question.options = options;
                     console.log(`Split combined options into ${options.length} separate options`);
-                    
+
                     // If we didn't get exactly 4 options, pad or trim
                     while (question.options.length < 4) {
                         question.options.push(`Option ${String.fromCharCode(65 + question.options.length)}`);
@@ -240,7 +240,7 @@ function preprocessQuestionOptions(questions) {
                     }
                 }
             }
-            
+
             // Handle cases where options might be in a single string but not with A, B, C, D markers
             else if (optionText.includes('\n')) {
                 // Try splitting by newlines if there are at least 3 newlines
@@ -251,29 +251,29 @@ function preprocessQuestionOptions(questions) {
                 }
             }
         }
-        
+
         // Final sanity check to ensure we have exactly 4 options
         if (!Array.isArray(question.options) || question.options.length !== 4) {
             console.warn(`Question has ${question.options?.length || 0} options, adjusting to 4...`);
             const existingOptions = Array.isArray(question.options) ? question.options : [];
             question.options = [];
-            
+
             // Keep existing options
             for (let i = 0; i < Math.min(existingOptions.length, 4); i++) {
                 question.options.push(existingOptions[i]);
             }
-            
+
             // Add placeholder options if needed
             while (question.options.length < 4) {
                 question.options.push(`Option ${String.fromCharCode(65 + question.options.length)}`);
             }
-            
+
             // Trim if needed
             if (question.options.length > 4) {
                 question.options = question.options.slice(0, 4);
             }
         }
-        
+
         return question;
     });
 }
@@ -282,23 +282,23 @@ function preprocessQuestionOptions(questions) {
 function tryManualExtraction(text) {
     console.log("Attempting manual extraction of questions");
     const extractedQuestions = [];
-    
+
     // Try to find question patterns
     const questionBlocks = text.split(/\n\s*\d+[\.\)]/);
-    
+
     questionBlocks.forEach((block, index) => {
         if (block.trim().length === 0) return;
-        
+
         // Try to extract a question
         const questionMatch = block.match(/.*\?/);
         if (!questionMatch) return;
-        
+
         const questionText = questionMatch[0].trim();
-        
+
         // Try to find options in the text after the question
         const optionsText = block.substr(questionMatch[0].length).trim();
         let options = [];
-        
+
         // Look for A), B), etc. or A., B., etc.
         const optionMatches = optionsText.match(/[A-D][\.\)]\s*[^\n]*/g);
         if (optionMatches && optionMatches.length > 0) {
@@ -307,7 +307,7 @@ function tryManualExtraction(text) {
             // Just split by newlines if no option markers found
             options = optionsText.split('\n').filter(o => o.trim().length > 0).slice(0, 4);
         }
-        
+
         // Ensure we have 4 options
         while (options.length < 4) {
             options.push(`Option ${String.fromCharCode(65 + options.length)}`);
@@ -315,14 +315,14 @@ function tryManualExtraction(text) {
         if (options.length > 4) {
             options = options.slice(0, 4);
         }
-        
+
         extractedQuestions.push({
             question: questionText,
             options: options,
             correctAnswer: 0 // Default to first option
         });
     });
-    
+
     console.log(`Manual extraction found ${extractedQuestions.length} potential questions`);
     return extractedQuestions;
 }
@@ -330,24 +330,24 @@ function tryManualExtraction(text) {
 // Function to generate fallback questions when AI fails
 function generateFallbackQuestions(topic, difficulty, count) {
     console.log(`Generating ${count} fallback questions for topic: ${topic}, difficulty: ${difficulty}`);
-    
+
     // Generic questions for any topic
     const questions = [];
-    
+
     // Generate appropriate fallback questions based on topic
     for (let i = 0; i < count; i++) {
         questions.push({
-            question: `Question ${i+1} about ${topic}?`,
+            question: `Question ${i + 1} about ${topic}?`,
             options: [
-                `Option A for question ${i+1}`,
-                `Option B for question ${i+1}`,
-                `Option C for question ${i+1}`,
-                `Option D for question ${i+1}`
+                `Option A for question ${i + 1}`,
+                `Option B for question ${i + 1}`,
+                `Option C for question ${i + 1}`,
+                `Option D for question ${i + 1}`
             ],
             correctAnswer: Math.floor(Math.random() * 4) // Random correct answer
         });
     }
-    
+
     return questions;
 }
 
@@ -368,16 +368,16 @@ function validateQuestion(q) {
     try {
         const isValid = (
             q && typeof q === 'object' &&
-            q.question && 
+            q.question &&
             typeof q.question === 'string' &&
-            Array.isArray(q.options) && 
+            Array.isArray(q.options) &&
             q.options.length === 4 &&
             q.options.every(opt => typeof opt === 'string') &&
             typeof q.correctAnswer === 'number' &&
-            q.correctAnswer >= 0 && 
+            q.correctAnswer >= 0 &&
             q.correctAnswer <= 3
         );
-        
+
         if (!isValid) {
             const issues = [];
             if (!q || typeof q !== 'object') issues.push("Question is not an object");
@@ -392,13 +392,13 @@ function validateQuestion(q) {
             }
             console.warn(`Invalid question format: ${issues.join(', ')}`);
         }
-        
+
         // Sanitize question and options to prevent XSS
         if (isValid) {
             q.question = sanitizeText(q.question);
             q.options = q.options.map(opt => sanitizeText(opt));
         }
-        
+
         return isValid;
     } catch (e) {
         console.error("Error validating question:", e);
@@ -409,7 +409,7 @@ function validateQuestion(q) {
 // Utility function to extract questions from AI response
 function extractQuestionsFromResponse(text) {
     let questions;
-    
+
     // Try direct JSON parse
     try {
         questions = JSON.parse(text);
@@ -418,7 +418,7 @@ function extractQuestionsFromResponse(text) {
     } catch (e) {
         console.log("Direct JSON parse failed, trying alternatives");
     }
-    
+
     // Try finding JSON array pattern
     const jsonMatch = text.match(/\[\s*\{[^]*\}\s*\]/);
     if (jsonMatch) {
@@ -430,7 +430,7 @@ function extractQuestionsFromResponse(text) {
             console.log("JSON array parsing failed");
         }
     }
-    
+
     // Try individual question objects
     const questionMatches = text.match(/\{[^}]+\}/g);
     if (questionMatches) {
@@ -444,13 +444,13 @@ function extractQuestionsFromResponse(text) {
                 }
             })
             .filter(q => q !== null);
-        
+
         if (questions.length > 0) {
             console.log(`Found ${questions.length} individual question objects`);
             return questions;
         }
     }
-    
+
     // Last resort: manual extraction
     return tryManualExtraction(text);
 }
