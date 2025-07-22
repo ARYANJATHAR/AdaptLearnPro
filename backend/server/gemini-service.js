@@ -344,6 +344,18 @@ function generateFallbackQuestions(topic, difficulty, count) {
     return questions;
 }
 
+// Function to sanitize text to prevent XSS
+function sanitizeText(text) {
+    if (typeof text !== 'string') return '';
+    return text
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+        .replace(/`/g, '&#x60;')
+        .replace(/\$/g, '&#36;');
+}
+
 // Utility function to validate a single question
 function validateQuestion(q) {
     try {
@@ -372,6 +384,12 @@ function validateQuestion(q) {
                 if (q.correctAnswer < 0 || q.correctAnswer > 3) issues.push(`CorrectAnswer out of range: ${q.correctAnswer}`);
             }
             console.warn(`Invalid question format: ${issues.join(', ')}`);
+        }
+        
+        // Sanitize question and options to prevent XSS
+        if (isValid) {
+            q.question = sanitizeText(q.question);
+            q.options = q.options.map(opt => sanitizeText(opt));
         }
         
         return isValid;

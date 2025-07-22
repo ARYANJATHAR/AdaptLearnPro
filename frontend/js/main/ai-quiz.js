@@ -154,10 +154,14 @@ export const AIQuizApp = {
     
     async fetchQuestions(difficulty = 1, count = 5) {
         try {
+            // Get API key from localStorage if available (for production)
+            const apiKey = localStorage.getItem('apiKey') || '';
+            
             const response = await fetch('/api/quiz/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-API-Key': apiKey
                 },
                 body: JSON.stringify({
                     topic: this.topic,
@@ -167,7 +171,14 @@ export const AIQuizApp = {
             });
             
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                // Handle specific error codes
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please check your API key.');
+                } else if (response.status === 429) {
+                    throw new Error('Too many requests. Please try again later.');
+                } else {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
             }
             
             const data = await response.json();

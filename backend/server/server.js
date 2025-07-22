@@ -4,11 +4,57 @@ const path = require('path');
 const { generateQuizQuestions } = require('./gemini-service');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
+// Import security packages
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// Security middleware
+// Apply helmet for security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "https://kit.fontawesome.com", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "fonts.googleapis.com", "https://use.fontawesome.com", "https://kit.fontawesome.com", "https://cdnjs.cloudflare.com"],
+      fontSrc: ["'self'", "fonts.gstatic.com", "https://use.fontawesome.com", "https://kit.fontawesome.com", "https://cdnjs.cloudflare.com", "data:"],
+      imgSrc: ["'self'", "data:", "https://ka-f.fontawesome.com", "https://cdnjs.cloudflare.com"],
+      connectSrc: ["'self'", "https://ka-f.fontawesome.com", "https://cdnjs.cloudflare.com"],
+      scriptSrcAttr: ["'unsafe-inline'"]
+    }
+  },
+  // Allow iframe embedding for development
+  frameguard: process.env.NODE_ENV === 'production' ? true : false
+}));
+
+// Rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: {
+    success: false,
+    error: 'Too many requests, please try again later.'
+  }
+});
+
+// Apply rate limiting to API routes
+app.use('/api/', apiLimiter);
+
+// CORS configuration with specific origins in production
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? (process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['https://adaptlearnpro.vercel.app']) 
+    : true,
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -30,8 +76,28 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
+// API Key validation middleware
+const validateApiKey = (req, res, next) => {
+  // Skip API key validation in development mode
+  if (process.env.NODE_ENV !== 'production') {
+    return next();
+  }
+  
+  const apiKey = req.headers['x-api-key'];
+  const validApiKey = process.env.API_KEY;
+  
+  if (!apiKey || apiKey !== validApiKey) {
+    return res.status(401).json({ 
+      success: false,
+      error: 'Unauthorized: Invalid or missing API key'
+    });
+  }
+  
+  next();
+};
+
 // AI Quiz Generation Route
-app.post('/api/quiz/generate', async (req, res) => {
+app.post('/api/quiz/generate', validateApiKey, async (req, res) => {
   try {
     const { topic, difficulty = 1, count = 10 } = req.body;
     
