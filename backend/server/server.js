@@ -11,6 +11,12 @@ const helmet = require('helmet');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Configure Express to trust proxy headers in production
+if (process.env.NODE_ENV === 'production') {
+  // Trust Vercel's proxy configuration
+  app.set('trust proxy', true);
+}
+
 // Security middleware
 // Apply helmet for security headers
 app.use(helmet({
