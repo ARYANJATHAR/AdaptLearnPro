@@ -20,7 +20,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Initialize the model with correct model name
 const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",  // Use stable version instead of 2.0-flash
+    model: "gemini-2.5-flash-lite",
     generationConfig: {
         temperature: 0.7,       // Controls randomness (0.0-1.0)
         topK: 40,               // Increased for more diversity
